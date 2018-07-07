@@ -1,0 +1,614 @@
+DNS
+===
+
+Objective
+---------
+[1] To set up a purely resolving DNS caching server for 
+    caching names only.
+
+[2] To setup a DNS Server with authoritative resource records
+    for a zone called society.intipen.edu.my
+
+
+
+[1] Purely Caching Nameserver
+=============================
+
+Hosts file
+----------
+The alternative to DNS is 
+
+	/etc/hosts
+
+Whenever a client program wishes to connect. Given a 
+hostname, it will consult this file to file the IP address.
+Alternative we can use the Domain Name System, fondly
+abbreviated as DNS. An example entry is:
+
+	127.0.0.1   localhost
+	192.168.0.1 Farscape
+	192.168.0.2 Stargate
+
+
+For a small network this may suffice, since it is quite
+possible to duplicate the same file in all the hosts within
+the LAN, but for a big network, it becomes tedious to maintain
+all the "/etc/hosts" file for each and every host. A better 
+method then is to set all host to consult a DNS server.
+
+
+
+DNS
+---
+Machines on the internet understands IP addresses, not
+names. Names are for human convenience. In order to connect
+to a webserver, eg, the Web browser needs to resolve the
+name, ie, convert the domain name into IP address. It does
+this by consulting the "/etc/hosts" file described above, or,
+connecting to a DNS server to request for the 
+translation.  If the DNS server does not know it, it will
+ask other DNS servers until an answer is obtained. Once
+an answer is obtained, the DNS server will send it to
+the web browser who will then connect to the IP address.
+Fig. A below shows such a system.
+
+              1                       2
+ 	  www.xyz.com		  www.xyz.com
+   Web   ----------->     DNS     ---------->    DNS 
+ Browser      4          Server       3         Server  
+    |    202.34.56.2       A     202.34.56.2      B
+    |    <----------             <-----------
+    |5
+    |
+    |    202.34.56.2
+    |-------------------> Internet
+
+
+         Fig. A.  DNS servers resolving a name 
+
+
+
+[1] Web Browser asks DNS server A "What's the IP address of
+    www.xyz.com?".
+
+[2] DNS Server A says "I don't know but i'll check with DNS
+    Server B"
+
+[3] DNS Server B says to A "It's 202.34.56.2"
+
+[4] DNS Server A then tells Web browser "It's 202.34.56.2"
+
+[5] Web Browser then connects to 202.34.56.2
+
+
+
+The package name is BIND and the DNS server is called "named"
+which stands for "name daemon".
+
+Edit file
+
+	/etc/resolv.conf
+
+by adding
+
+	search Farscape
+	nameserver 127.0.0.1
+	nameserver 202.123.445.56
+
+where search is a keyword and Farscape is the name of the
+host where named runs. This is followed by a list of
+nameservers starting with 127.0.0.1 which is a must. Do not
+change this.  The directive "nameserver" is a keyword.
+Comments begin with a semicolon ";".
+
+Edit 
+
+	/etc/nsswitch.conf
+
+by making sure this line is present;
+
+	hosts:  files dns	
+
+This tells the OS to search 
+
+	/etc/hosts 
+
+first to resolve the hostnames. If cannot resolve then only
+use the namserver.
+
+
+Edit
+
+	/etc/host.conf
+
+as follows:
+	
+	order hosts,bind
+	multi on
+
+It means search /etc/hosts first then nameserver.
+The second line "multi on" means that a hostname can 
+have multiple entries, ie, more than one IP address.
+Also known as multi-homed.
+
+
+
+To start or stop the nameserver just do:
+
+	/etc/rc.d/init.d/named start|stop
+
+
+DNS clients configuration
+--------------------------
+All the hosts within the LAN who needs to resolve
+names must be set to consult the DNS server, Farscape,
+in this case. For each host, add the following lines
+in the "/etc/resolv.conf" file:
+
+	search Farscape
+	nameserver 192.168.0.1
+
+and add this in the file "/etc/hosts" file:
+
+	192.168.0.1  Farscape 
+
+
+
+
+
+[2] Setting up a Domain
+=======================
+
+Choosing a Domain Name
+----------------------
+
+If your network has been registered as:
+
+	society.intipen.edu.my
+
+then you should NOT set your domain as:
+
+	intipen.edu.my
+
+because any search for www.intipen.edu.my, or,
+mail.intipen.edu.my, or, ns.intipen.edu.my, will NOT
+go out to your ISP's nameservers. The resolver
+will search based on the:
+	
+	/etc/resolv.conf
+
+file, eg:
+
+	search intipen.edu.my	
+	nameserver 127.0.0.1
+	nameserver 202.188.0.133
+	nameserver 202.188.1.5
+
+For a request for www.intipen.edu.my, it will search 
+nameserver 127.0.0.1, ie the LAN's host where nameserver 
+runs. It will not search the second or third nameserver.
+Another wrong setting is to set your domain as: 
+
+	edu.my
+
+and the /etc/resolv.conf as:
+
+	search edu.my
+	nameserver 127.0.0.1
+	nameserver 202.188.0.133
+	nameserver 202.188.1.5
+
+If you set as above, then, whenever any of your clients
+within the LAN requests for any name that ends with 
+".edu.my", eg, www.intipen.edu.my, or, www.uum.edu.my, it
+will search 127.0.0.1 and will never go out to the Internet
+to search. The result is that none of your hosts within your 
+LAN can ever surf an websites that end with ".edu.my"!
+
+
+Therefore, if your domain is registered as:
+
+	society.intipen.edu.my
+
+the correct setting should be:
+
+	search society.intipen.edu.my	
+	nameserver 127.0.0.1
+	nameserver 202.188.0.133
+	nameserver 202.188.1.5
+
+
+
+Name Server Initialization
+--------------------------
+The configuration file is:
+
+	/etc/named.conf
+
+
+set as follows:
+
+--------------------------------------------------	
+// Configuration for zone society.intipen.edu.my 
+
+options {
+	directory "/var/named";
+};
+
+zone "." {
+	type hint;
+	file "named.ca";
+};
+
+
+zone "0.0.127.in-addr.arpa" {
+	type master;
+	notify no;
+	file "named.local";
+};
+
+
+zone "society.intipen.edu.my" {
+	type master;
+	notify no;
+	file "society.intipen.edu.my";
+};
+
+zone "0.168.192.in-addr.arpa" {
+	type master;
+	notify no;
+	file "192.168.0";
+};
+--------------------------------------------------------
+
+
+Note that named.conf controls the initialization of named,
+the nameserver. 
+
+The only lines you may need to change are:
+
+---------------------------------------------------
+zone "society.intipen.edu.my" {
+	type master;
+	notify no;
+	file "society.intipen.edu.my";
+};
+
+zone "0.168.192.in-addr.arpa" {
+	type master;
+	notify no;
+	file "192.168.0";
+};
+----------------------------------------------------
+
+
+Change 
+
+	zone "society.intipen.edu.my" 
+	...
+	file "society.intipen.edu.my";
+
+to your own zone. Note that the file
+
+	"society.intipen.edu.my"
+
+should be in
+
+	/var/named/
+
+the root directory for all zone records as specified by
+the options directive:
+
+	options {
+		directory "/var/named";
+	};
+
+Later we will see what to put in the file. Basically it
+should contain all forward mappings, ie, name --> IP
+resolutions.
+
+Coming back to the /etc/named.conf, change these lines
+
+
+	zone "0.168.192.in-addr.arpa" 
+	...
+	file "192.168.0";
+
+to suit your LAN.
+
+Notice the IP address is reversed in the "zone" directive.
+In this case, our LAN is 192.168.0.x, as such this file should
+be named  "192.168.0".  It will also be in this directory:
+
+	/var/named
+
+
+
+Zone records
+------------
+According to /etc/named.conf, there should be 
+four zone records in the directory "/var/named/" :
+
+	named.ca
+	society.intipen.edu.my
+	192.168.0
+	named.local
+
+There should be one more:
+
+	localhost.zone
+
+So, altogether 5 zone records.	Do not edit the
+	
+	named.ca
+	localhost.zone
+
+zone records. The "named.ca" file lists all the root servers in 
+the world. Whenever, a nameserver cannot resolve a name, it consults
+the root servers either recursively or interactively. Recursive
+is when the ISP's nameserver recursively asks each name server
+in turn up its domain tree, all the way back up to the root.
+Interactive, is when the nameserver returns the address of 
+the next higher up nameserver to the client's resolver and it is
+up to the resolver of the client machine to follow up.
+
+All the other three zone records that should be edited are:
+
+	society.intipen.edu.my
+	192.168.0
+	named.local
+
+Their contents would now be described below.
+
+
+.-------------------------.
+| society.intipen.edu.my  |
+ ------------------------- 
+
+----------------------------------------------------------
+;zone for society.intipen.edu.my 
+$TTL	86400
+@	IN SOA society.intipen.edu.my. paul.intipen.edu.my.(
+				42		; serial
+				3H		; refresh
+				15M		; retry
+				1W		; expiry
+				1D )		; minimum
+	   	   NS		ns	 	; nameserver
+	   	   MX		10 linux-1 	; mail server
+localhost  	   A		127.0.0.1
+mail		   A 		192.168.0.1
+ns		   A 		192.168.0.1
+www		   A		192.168.0.1
+linux-1		   A		192.168.0.1
+Unix		   A		192.168.0.2
+Annie		   A	        192.168.0.3
+Linux		   CNAME	Unix 
+Notebook	   CNAME	Unix 
+-------------------------------------------------------------
+
+Note this line:
+	
+@	IN SOA society.intipen.edu.my. paul.intipen.edu.my.(
+
+paul.intipen.edu.my. is not read by named, it is the email of
+the administrator:
+
+	paul@intipen.edu.my
+
+Notice that there is a "." at the end of each name, ie, the
+full-path name all the way to the root of the DNS tree.
+Fig A below shows the DNS tree.
+
+
+		      "	. "  [ root]
+
+		        |
+ ------------------------------------------.
+                |                          |
+	        | 
+                my
+                |
+	 -------------.
+                |     |
+               edu
+                |
+             ------.
+                   |
+                  intipen
+  		     |
+                  -------.
+			 |
+ 		      society
+	                 |
+	           .-----------.
+                               |	
+                   [ Here's where we are
+		     authoritative for
+                     our zone records ]  
+
+
+	Fig A. The DNS tree
+	-------------------
+
+So, there are two ways to specify names, absolute or
+relative.  In absolute, we specify all the way to the
+root, ie, the ".", eg,
+
+	linux-1.society.intipen.edu.my.
+
+Relative, is where we just mention the hostname, ie,
+
+	linux-1
+
+Note that we do not put a  "." above. To get the FQDN,
+or absoulute pathname, "society.intipen.edu.my." will be
+automatically appended to it, to get:
+
+	linux-1.society.intipen.edu.my.
+
+By the same reasoning, looking at the zone record for
+society.intipen.edu.my above,
+
+	ns
+
+means
+	ns.society.intipen.edu.my.
+
+and
+	mail
+
+means
+
+	mail.society.intipen.edu.my.
+
+Take a look at this line:
+
+	mail		   A 		192.168.0.1
+
+Your could also write it this way:
+
+   mail.society.intipen.edu.my.   A   192.168.0.1
+
+
+The "A" means authoritative. It means this record is the
+master record for the mapping
+
+	mail.society.intipen.edu.my.  --> 192.168.0.1
+
+
+Take a look at this line:
+
+	Linux		   CNAME	Unix 
+
+The word "CNAME" means alias. It means:
+
+   Linux.society.intipen.edu.my == Unix.society.intipen.edu.my
+
+Note that the "A" name should always be on the right. Never
+put a CNAME on the right. Note also that one IP can have 
+multiple domain names.
+
+Remember also that nameservers are not case-sensitive, therefore
+"linux" is the same as "Linux".  If you did this: 
+
+
+	linux		   A		192.168.0.1
+	Unix		   A		192.168.0.2
+	Annie		   A	        192.168.0.3
+	Linux		   CNAME	Unix 
+	Notebook	   CNAME	Unix 
+
+
+Your nameserver will never be able to resolve at all anything that
+ends in .society.intipen.edu.my and you will get a SERVFAIL message
+when doing:
+
+	dig linux.society.intipen.edu.my
+
+Where's the error?  The A record has a line: "linux" which conflicts
+with the CNAME's "Linux" !
+
+
+
+.-----------.
+| 192.168.0 |
+ -----------
+The contents of this file:
+
+-----------------------------------------------------
+; Pointer records for network 192.168.0
+$TTL	86400
+@  IN  SOA  society.intipen.edu.my.  paul.intipen.edu.my. (
+                                      1997022700 ; Serial
+                                      28800      ; Refresh
+                                      14400      ; Retry
+                                      3600000    ; Expire
+                                      86400 )    ; Minimum
+                NS      ns.society.intipen.edu.my 
+
+1		PTR	mail.society.intipen.edu.my
+1               PTR     ns.society.intipen.edu.my
+1		PTR     www.society.intipen.edu.my
+2		PTR	Unix.society.intipen.edu.my
+3		PTR	Annie.society.intipen.edu.my
+----------------------------------------------------------
+
+Note that PTR means Pointer Records, ie, inverse or reverse
+mappings, ie mappings from IP --> Names. Note the numbers on
+the left column It means that
+
+	1
+
+means
+	192.168.0.1
+
+and
+	2
+means
+	192.168.0.2
+
+These IP should match the file "society.intipen.edu.my" 
+described above.
+
+
+.-------------.
+| named.local |
+ -------------
+The contents of this file: 
+
+------------------------------------------------------
+$TTL	86400
+@   IN  SOA society.intipen.edu.my.  paul.intipen.edu.my. (
+                                      1997022700 ; Serial
+                                      28800      ; Refresh
+                                      14400      ; Retry
+                                      3600000    ; Expire
+                                      86400 )    ; Minimum
+                NS      127.0.0.1.
+
+1               PTR     localhost.
+
+---------------------------------------------------------
+
+
+
+Restart sendmail and check for errors as follows:
+
+	/etc/rc.d/init.d/sendmail restart
+
+	tail /var/log/messages
+
+Read the errors, if any, and correct them.
+
+
+Sendmail and DNS
+----------------
+You should set these files
+
+	/etc/sysconfig/network
+
+with these entries:
+	
+	NETWORKING=yes
+	HOSTNAME="linux-1.society.intipen.edu.my"
+
+And set this file
+
+	/etc/hosts
+
+with these entries:
+
+
+	127.0.0.1	localhost
+	192.168.0.1	linux-1.society.intipen.edu.my
+
+In other words, you should set the server's name as
+"linux-1.society.intipen.edu.my", or else, Sendmail
+will take ages to start!
+	
+Remember to start ipop3, so that clients can remotely
+retrieve mail:
+
+	chkconfig ipop3 on
+

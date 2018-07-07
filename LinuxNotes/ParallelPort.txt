@@ -1,0 +1,182 @@
+CONTROLLING THE PARALLEL PORT
+=============================
+
+Objective
+---------
+To set up and control the parallel port. For example,
+to activate and deactive a DC motor and LED connected
+to the parallel port.
+
+
+1.  PREPARING THE PARALLEL PORT CABLE
+
+Follow the same method as set out in Chin(2002). Briefly,
+take a parallel port cable and strip all the wires. Use 
+a jewel case and stick the wires to the cover using blu tack.
+Pins 2 to 9 (+5V)are data pins. Pins 18 to 25 are ground.
+Notice the color of the wires of the cut DB25 male connector
+to identify the wires. Fig 1 shows the DB25 male connector
+from the front view, ie facing the pins. Fig 2 is the
+CD jewel case that is to hold the cut wires.
+
+
+
+
+ .----------------------------------------------.
+  \   1  2  3  4  5  6  7  8  9  10  11  12  13 /
+    \  14 15 16 17 18 19 20 21 22  23  24  25  /
+      ----------------------------------------
+
+Fig 1:  The pin numbers as viewed from the front
+
+
+
+
+---------------------------------------------------
+|	Underside of CD jewel case					  |	
+|					          |
+|						  |
+|						  |	
+| 						  |
+|  						  |
+|.----------------------------------------------. |
+|  \   1  2  3  4  5  6  7  8  9  10  11  12  13 /|
+|    \  14 15 16 17 18 19 20 21 22  23  24  25  / |
+|      ----------------------------------------   |
+|--------------------------------------------------
+
+Fig 2: The layout of the CD jewel case used to
+	hold the cut wires
+
+
+The other end of the cable is connected to the female
+DB25 connector on the system unit.
+
+Use 8 LED's. Connect each +ve lead to pin2, and connect 
+each -ve lead to pin18. In fact, you could use any pins 
+from 18 to 25 as -ve (ground).
+
+Do the same for pins 3, 4, 5, 6, 7, 8, 9.
+
+Pins 2 to 9 are the data pins. According Rubini(1998),
+p 179, pin 9 is the most significant bit.
+
+
+2. THE SOURCE CODE
+
+Below is the source code, adapted from Rui Li (2001):
+
+/*  _parport_control.c - to control the simple parallel port kit 
+ *  that I created, modified from rui li's code 
+ *  compile to p, run: p 0 0 0 0 0 0 0 1, to turn on pin 2
+ *                     p 0 0 0 0 0 0 1 0, to turn on pin 3, etc
+ *           - Paul Chin */
+
+#include <sys/io.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
+void port_ctrl(int pin2, int pin3, int pin4, int pin5, 
+int pin6, int pin7, int pin8, int pin9, int BASE_PORT)
+{
+	int value;
+	if(ioperm(BASE_PORT, 3, 1))
+	{
+		perror("ioperm");
+		exit(1);
+	}
+	value
+	=pin2*1+pin3*2+pin4*4+pin5*8+pin6*16+pin7*32+pin8*64+pin9*128;
+	outb(value, BASE_PORT);
+	exit (0);
+}
+
+main(int argc, char * argv[])
+{
+	int BASE_PORT=0x378; /* set BASE_PORT (default is 0x378) */
+	int ch;
+	int pin2, pin3, pin4, pin5, pin6, pin7, pin8, pin9;
+
+	pin9=pin8=pin7=pin6=pin5=pin4=pin3=pin2=0;
+	
+	pin9=atoi(argv[1]);
+	pin8=atoi(argv[2]);	
+       	pin7=atoi(argv[3]);
+	pin6=atoi(argv[4]);	
+	pin5=atoi(argv[5]);
+	pin4=atoi(argv[6]);	
+       	pin3=atoi(argv[7]);
+	pin2=atoi(argv[8]);	
+	
+	/* pin*=1 the port is on pin*=0 the port is off */ 
+	
+	port_ctrl(pin2,pin3,pin4,pin5,pin6,pin7,pin8,pin9,BASE_PORT);
+	exit (0);
+}
+
+
+Note the correspondence between binary number with 
+the pins 9 to 2, eg:
+
+	pin:   9   8   7   6   5   4   3   2  value
+ 	bits:  0   0   0   0   0   0   0   1   1
+	       0   0   0   0   0   0   1   0   2
+               0   0   0   0   0   0   1   1   3
+ 
+If a relay or some switching mechanism is connected 
+to pins 2,3,4,5,6,7,8,9 on the one hand, and pin 18
+(or 19, or 20, or 21, or 22, or 23, or 24, or 25), 
+then you can control upto 8 external devices.
+	
+Connect LEDs from pins 9, 8, 7, 6, 5, 4, 3, 2 (+ve) and
+to pin 18 (in fact 18 - 25 ok) as -ve.  Use program 
+above to light the LED:
+
+	p 0 0 0 0 0 0 0 1   lights led 2
+        p 0 0 0 0 0 0 1 0   lights led 3, etc
+
+
+
+3.  CONTROLLONG A RELAY USING PARALLEL PORT
+
+Assemble the following circuit:
+
+                   /c-----------|	
+  pin 2 ---->|----|             |
+	    LED	   \e	       --------____external
+		    |          | RELAY|    device
+		    |          |_______----to control
+		    |		|
+		    |	      -----
+		    |           -  3V battery
+		    |	      -----
+	            |   	_
+		    |	        |
+  pin 18 -----------------------|
+
+
+You may connect a DC motor or any other device as
+the external device to be controlled.
+
+To turn on pin 2, run the program above :
+
+       p 0 0 0 0 0 0 0 1
+
+and the relay will be activated, to turn off pin 2:
+
+       p 0 0 0 0 0 0 0 0
+
+
+
+REFERENCES
+
+Chin, P.(2002). "Controlling Devices". 
+Course Notes for csc326: Systems Programming.
+Inti International College Penang
+
+Rui Li (2001). Home Electrical Device HowTo. 
+RedHat Linux 7.2 Documentation
+
+Rubini, A. (1998). Linux Device Drivers. O'Reilly
+

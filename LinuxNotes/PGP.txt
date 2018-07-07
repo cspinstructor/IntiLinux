@@ -1,0 +1,168 @@
+PGP (Pretty Good Privacy)
+=========================
+
+Objective
+---------
+How to install GnuPG on linux.
+
+
+
+Where to get it
+---------------
+
+GnuPG is obtainable free from
+http://www.gnupg.org
+
+This is the GNU version of PGP. 
+
+
+
+Unpacking and Installing
+-----------------------
+The distribution is gnupg-1.2.1.tar.bz2.
+To unzip and unpack:
+
+	bunzip2 gnupg-1.2.1.tar.bz2
+	tar -xvf  gnupg-1.2.1.tar.bz2
+
+
+
+After unpacking, goto the directory and do:
+
+	chmod 755 configure
+	./configure
+
+to configure the Makefile for your target
+system. Then, to compile the binaries, do:
+
+	make
+
+
+Then, install it:
+
+	make install
+
+
+
+Using PGP
+--------
+
+Generate a Key Pair:
+
+	gpg --gen-key
+
+To import a public key:
+
+	gpg --import pub_key.asc
+
+To import a private key:
+
+	gpg --allow-secret-key-import --import sec_key.asc
+
+To encrypt a file with a recipient's public key:
+
+	gpg -r "Bill Gates"  -ea  message
+
+The -a is to encrypt in armor format (ascii), and -r is 
+recipient. List the public-keys to see a list of recipients.
+
+
+To list public-keys:
+
+	gpg --list-keys
+
+
+To decrypt a file with your private key:
+
+	gpg  -o msg.txt -d message.asc 
+
+
+
+To send email, encrypt the message with the recipient's 
+public-key, then paste the contents of the .asc file
+inside the body of the email message.
+
+To decrypt email sent to you, just do the reverse,
+copy the contents of the email into a file ending
+with extension .asc, then decrypt the file with your
+private key.
+
+
+
+Digital signature
+-----------------
+To sign and encrypt:
+
+	gpg -sea -r "paul" message
+
+where,
+-s is sign, -e is encrypt, -a is armored format,
+-r is recipient
+
+
+To verify signature:
+
+	gpg -o msg.txt -d message.asc
+
+That is, it will, BOTH  decrypt AND verify.
+
+
+
+Front end
+---------
+This front end is not necessary if you decide to use
+GnuPG on the command line.
+
+Download the GUI frontend called GPA from
+http://www.gnupg.org.
+
+
+Unpack it. cd to the directory and do:
+
+	chmod 755 configure
+	./configure
+
+to configure the Makefile for your target
+system. Then, to compile the binaries, do:
+
+	make
+
+
+Then, install it:
+
+	make install
+
+
+Conventional Encryption
+-----------------------
+Also known as symmetrical encryption, the
+password for encryption and decryption is the same:
+
+
+Encrypt:
+
+	gpg -c  file
+
+
+You will be asked for passphrase. It need not be
+the same as your private/secret key.
+You will get a ciphertext file: file.gpg
+
+
+Decrypt:
+
+	gpg -d file.gpg > file
+
+You will be asked for passphrase.
+
+
+
+Changing Passphrase 
+-------------------
+
+To change the private/secret key passphrase:
+
+	gpg --edit-key bill passwd
+
+Enter the new passphrase twice, type quit  and type
+yes to save changes.

@@ -1,0 +1,172 @@
+SIMPLE NETWORK MANAGEMENT PROTOCOL (SNMP)
+=========================================
+
+Objective
+---------
+[1] To configure and run an SNMP Agent.
+[2] To query the SNMP Agents using SNMP Manager programs.
+
+
+Brief Theory
+------------
+SNMP Agents is a server which runs on a host machine that
+is to be monitored and managed.  The server will collect information 
+about the host it is on and store them in a database called the 
+MIB (Management Information Base).  When the SNMP Manager
+queries the server,it can get these information.
+
+Note that:
+
+	SNMP Agent   = SNMP Server (ie, snmpd)
+	SNMP Manager = SNMP Client (ie, snmpget, snmpwalk)
+
+
+RFC 1155 stipulates a framework for standardizing information
+that an SNMP Manager can manage. These information pertain to
+managed objects. Managed objects refer to the group of variables
+in the network that is to be monitored/managed. These objects
+are depicted graphically in what is called an Object Identifier
+Tree, as shown in Fig A below:
+
+
+			 . [root]
+			 |
+			 |	
+   --------------------------------------
+   |        		|		|
+ ccitt (0)	       iso (1)      joint-iso-ccitt (2)
+		        |
+		       org (3)
+			|
+		       dod (6)
+			|
+		     internet (1)
+			|
+	--------------------------------------------
+        |             |            |               |
+   directory(1)  management(2)  experimental(3) private(4) 
+		      |
+		    MIB(1)
+		      |
+		      |-- system (1)
+	 	      |-- interfaces (2)
+	 	      |-- at (3)
+		      |-- ip (4)
+		      |-- icmp (5)
+		      |-- tcp (6)
+		      |-- udp (7)
+		      |-- egp (8)
+
+
+	Fig A. Object Identifier Tree	
+	-----------------------------				
+
+
+Therefore, the MIB objects are:
+
+	.1.3.6.1.2.1.1 to .1.3.6.2.1.8
+
+
+Note that within each group, there are many variables.
+The examples below will demonstrate some of these
+variables.
+
+
+
+SNMP Agent
+----------
+The SNMP agent is a server called snmpd. 
+The configuration file is /etc/snmp/snmpd.conf 
+The relevant parts are shown below:
+
+snip...............................................................
+			.
+			.
+			.
+# Third, create a view for us to let the group have rights to:
+
+#        name           incl/excl     subtree         mask(optional)
+#view    systemview     included      system
+#view    systemview     included      interfaces 
+ view 	 systemview     included      .1.3.6.1.2.1
+			.
+			.
+			.
+snip..................................................................
+
+
+Note the part:
+
+	.1.3.6.2.1
+
+This means allow the SNMP Manager to view all variables in the MIB tree.
+If you wanted to monitor only the "system" group, then uncomment this line:
+
+
+	#view    systemview     included      system
+
+
+
+To start, stop
+or restart:
+
+	/etc/rc.d/init.d/snmpd start|stop|restart
+
+
+Do a "netstat -uan" to see if it is running. Notice it is
+UDP. You will get something like this:
+
+
+
+Proto Recv-Q Send-Q Local Address           Foreign Address         State      
+udp        0      0 0.0.0.0:161             0.0.0.0:*                           
+
+	
+The presence of UDP port 161 shows that the snmpd server is
+running.
+
+
+SNMP Manager 
+------------	
+To query the SNMP Agent:
+
+	snmpget 192.168.20.3 public system.sysDescr.0
+or
+	snmpget 192.168.20.3 public .1.3.6.1.2.1.1.1.0
+
+or
+	snmpget 192.168.20.3 public 1.1.0
+
+will return something like this:
+
+	Linux society.intipen.edu.my 2.4.7-10  Thu Sep 6 17:27:27 
+
+
+public is the community string, analogous to login name.
+No password has been set. You could use names instead of IP.
+
+Some further examples:
+
+system.sysDescr.0  = 1.1.0
+system.sysUpTime.0 = 1.3.0
+system.sysContact.0 = 1.4.0 
+system.sysName.0 = 1.5.0
+system.sysLocation.0 = 1.6.0
+
+
+Another way to query is to use snmpwalk:
+
+	snmpwalk 192.168.20.3 public system
+or,
+	snmpwalk 192.168.20.3 public .1.3.6.1.2.1.1
+
+The above will return all the variables inside the
+"system" group of the MIB tree.
+
+
+To query the interfaces:
+
+	snmpwalk 192.168.20.3 public interfaces
+or,
+	snmpwalk 192.168.20.3 public .1.3.6.1.2.1.2
+

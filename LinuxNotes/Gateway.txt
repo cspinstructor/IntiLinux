@@ -1,0 +1,233 @@
+Internet Gateway
+================
+
+Objective
+---------
+
+This chapter will explain how to set up Internet Connection Sharing,
+so that all the PC's in the LAN can share one internet connection.
+
+
+Network Topology
+----------------
+The target topology is as shown in Fig A.  below:
+
+
+
+          Internet <---> Modem <---> Firewall <----> Hub <-----> LAN
+
+		      
+	Fig. A  Internet Connection Sharing Architecture
+
+
+Note that the Linux Firewall is also the Internet Gateway.
+The Firewall runs on the Linux Server.  Only firewall services and
+possibly sshd is enabled while all other services are disabled.  
+The firewall acts as an Internet Connection Sharing Device, using IP
+masquerading. It uses NAT, which stands for Network Address Translation.
+All PC's within the LAN will have intranet addresses, eg, Fig B below:
+
+	         
+	              		             192.168.0.2	
+     Internet  <--->    Firewall    <--->    192.168.0.3
+	              161.142.118.8	     192.168.0.4
+
+	Fig B.  Network Address Translation	
+
+
+In the above diagram, 192.168.0.2 192.168.0.3 and 192.168.0.4 are all
+intranet addresses.  Intranet addresses are reserved for Local Area
+Networks.  No routers on the Internet will route these addresses.	
+If any of the hosts within the LAN requests for a connection to an 
+Internet address, its IP will be substituted with the IP of the Firewall.
+The Firewall will send the packet to the Internet.  When the reply comes 
+back, the firewall will subsitute the internal host's IP again and 
+forward the packet to it.	
+
+
+
+
+Iptables
+--------
+Iptables is the Firewall aministration program used in Linux.
+It is also used to enable internet connection sharing. A simple
+script called "firewall.sh" to enable internet connection sharing is
+shown below:
+
+#!/bin/sh
+# firewall.sh
+# Lean and Mean MAC/IP - based Firewall Gateway
+# by Paul Chin  Aug 12, 2002
+# modified Sept 1, 2002 - can run without init.d/firewall.2-4
+# just do /etc/rc.d/firewall.sh
+# to stop, just flush the rulesets: iptables -F
+
+echo -e "\n\nLoading Lean and Mean MAC/IP based Firewall Gateway..\n"
+
+IPTABLES=/sbin/iptables
+
+#Setting the EXTERNAL and INTERNAL interfaces for the network
+EXTIF="ppp0"  # Use eth1 for ADSL dial-up, if ADSL static use eth1
+INTIF="eth0"
+
+echo "   External Interface:  $EXTIF"
+echo "   Internal Interface:  $INTIF"
+
+
+echo -en "   loading modules: "
+
+# Need to verify that all modules have all required dependencies
+echo "  - Verifying that all kernel modules are ok"
+/sbin/depmod -a
+
+
+#Load the main body of the IPTABLES module - "iptable"
+echo -en "ip_tables, "
+/sbin/insmod ip_tables
+
+
+#Load the stateful connection tracking framework - "ip_conntrack"
+echo -en "ip_conntrack, "
+/sbin/insmod ip_conntrack
+
+
+#Load the FTP tracking mechanism for full FTP tracking
+echo -en "ip_conntrack_ftp, "
+/sbin/insmod ip_conntrack_ftp
+
+
+#Load the IRC tracking mechanism for full IRC tracking
+echo -en "ip_conntrack_irc, "
+/sbin/insmod ip_conntrack_irc
+
+
+#Load the general IPTABLES NAT code - "iptable_nat"
+echo -en "iptable_nat, "
+/sbin/insmod iptable_nat
+
+
+#Loads the FTP NAT functionality into the core IPTABLES code
+# Required to support non-PASV FTP.
+echo -en "ip_nat_ftp, "
+/sbin/insmod ip_nat_ftp
+
+echo ".  Done loading modules."
+
+
+# Enable IP forwarding since it is disabled by default since
+echo "   enabling forwarding.."
+echo "1" > /proc/sys/net/ipv4/ip_forward
+
+
+# Dynamic IP users:
+echo "   enabling DynamicAddr.."
+echo "1" > /proc/sys/net/ipv4/ip_dynaddr
+
+
+# Default Policies
+echo "   clearing any existing rules and setting default policy.."
+$IPTABLES -P INPUT ACCEPT 
+$IPTABLES -F INPUT 
+$IPTABLES -P OUTPUT ACCEPT
+					3
+$IPTABLES -F OUTPUT 
+$IPTABLES -P FORWARD DROP 
+$IPTABLES -F FORWARD 
+$IPTABLES -t nat -F
+
+
+###################################################
+# Forwarding Rules
+
+# Note: Logging must precede Accept/Forwarding
+$IPTABLES -A FORWARD -j LOG \
+          --log-prefix "Firewall Forwarding: "
+
+$IPTABLES -A FORWARD -i $EXTIF -o $INTIF -j ACCEPT #Allow all inbound
+
+# List of hosts allowed to access the Internet
+# identified by MAC and IP address
+$IPTABLES -A FORWARD -i $INTIF -o $EXTIF \
+-s 192.168.0.11 -m mac --mac-source 00:00:E8:E3:B1:5C -j ACCEPT
+$IPTABLES -A FORWARD -i $INTIF -o $EXTIF \
+-s 192.168.0.1 -m mac --mac-source 00:00:E8:E3:B1:5C -j ACCEPT
+
+
+
+
+echo "   Enabling SNAT (MASQUERADE) functionality on $EXTIF"
+$IPTABLES -t nat -A POSTROUTING -o $EXTIF -j MASQUERADE
+
+
+
+echo -e "\nDone.\n"
+
+ 
+The above script should be put in /etc/rc.d
+
+To run the script call it directly as follows:
+
+
+/etc/rc.d/firewall.sh
+
+
+
+To stop the firewall:
+
+$iptables -F
+
+ie, flush all rulesets.
+
+Notice also, that logging should precede accepting and forwarding.
+If the reverse is done, no logging occurs.
+
+In the "firewall.sh" script above, the firewall is designed to 
+allow only certain IP's and MAC addresses to access the Internet.
+This is to prevent unauthorised users within the LAN from accessing
+the Internet. If the firewall only controls access based solely on 
+IP address, this can easily be spoofed. Therefore the MAC address is 
+also checked to ensure that only specific IP and MAC address combinations  
+are allowed.  If any LAN users wish to access the Internet, they will 
+need to see the System Administrator to register their MAC and IP address 
+with the firewall.
+
+Note however that this isn't 100% foolproof since MAC addresses can 
+also be spoofed as follows:
+
+	ifconfig eth0 hw ether <MAC>
+
+where <MAC> is the 6 byte address of the NIC in hexadecimals.
+See the chapter on Networking.
+
+We can only hope to make it more difficult to gain unauthorised
+access, not completely eliminate it.
+
+
+
+Configuring Clients
+-------------------
+Assuming that the Gateway's Internal Interface has the IP address:
+192.168.0.1.
+
+For win98/ME, just set the default gateway in the TCP/IP Properties
+to 192.168.0.1
+
+For Linux, edit the /etc/sysconfig/network file by adding:
+
+	GATEWAY="192.168.0.1"
+
+Or edit the file /etc/rc.d/rc.local file by adding:
+
+	route add default gw 192.168.0.1
+
+
+
+Warning
+-------
+If you are using the Firewall with a Dynamic IP address ADSL, then
+the EXTIF must be set to ppp0, because ppp0 is dynamically 
+assigned.  Do not set EXTIF to eth1 because eth1 does not have
+an IP address although it is up.
+
+For Static IP address ADSL, set the eth1 to the IP address assigned
+by TmNet.

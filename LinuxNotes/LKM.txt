@@ -1,0 +1,267 @@
+INTRO TO LKM PROGRAMMING
+========================
+
+Objective
+---------
+Introduction to writing Loadable Kernel Modules ("LKM").
+Linux kernel is mainly monolithic, yet allow kernel modules. 
+Modifications to kernel is done by writing LKM and inserting them
+into the kernel. This simplifies adding hardware, since you need not
+recompile the kernel whenever a new hardware is added. The device 
+driver can be inserted via LKM's. It also forms the basis for LKM-rootkits
+and System Call Interception as defence to BOF exploits. This chapter 
+is modified from the notes I wrote while teaching 
+csc 326 Operating Systems Programming.
+
+System Calls are ways in which Applications talk to the OS.
+The list of the 243 system calls are in:
+/usr/include/asm/unistd.h
+
+Also known as API's , ie, openings into the kernel.
+
+
+
+1.	Introduction 
+	------------
+	In order to control hardware, we need to manipulate bits,
+	by using assembly language, for example. But assembly is 
+	difficult to troubleshoot  and maintain and so a virtual
+	device is created to simpify things. This virtual device 
+	is called "device driver". To control the hardware, we 
+	write programs to control the device driver. Fig 1 shows 
+	the relationship between User Programs,	Kernel and Hardware. 
+	Devices mean device driver (Rubini, 1998).
+
+	   	    User Programs & Applications
+			      	|
+		       	(system calls)  
+	            		|
+		         K e r n e l 
+				|
+			H a r d w a r e
+			      			     
+
+		Fig. 1: A split view of the Operating System
+
+1.1	Filesystems
+		
+		Everything (including hardware) is treated as a file.
+	The files are the abstraction of the hardware.
+
+1.2	Device Control
+		
+		Device control operations are performed by code that is
+	specific to the device, called "device driver". The kernel must
+	have embedded in it a device driver for every peripheral present
+	on the system. The kernel could be expanded to incorporate
+	new devices even while the OS is up and running. Each piece of
+	code that could be added is called a "module". Each module is
+	made up of object code 	that can be dynamically linked or unlinked 
+	to the running kernel.	Linking is done with "insmod" program & 
+	unlinked with the "rmmod" program. To view the loaded modules, 
+	use lsmod. To view kernel symbols table, type ksyms.
+
+
+2.	Creation of software for controlling/monitoring devices
+	-------------------------------------------------------
+	This can refer to writing kernel modules (kernel space) or to 
+	application software (user space). 
+
+
+2.1	 Writing a kernel module
+	
+	The program below is a simple hello world module.
+	
+	#define MODULE
+	#include  <linux/module.h>
+
+	int init_module(void)
+	{	
+		printk("Hello, world\n");
+		return 0;
+	}
+
+	void cleanup_module(void)
+	{	
+			printk("Goodbye cruel world\n");
+	}
+		
+	
+	To compile,
+		
+		cc -DMODULE -D__KERNEL__ -DLINUX -c hello.c
+
+
+	As of kernel 2.4 (ie, RedHat 7.2, 8 distros), use this Makefile:
+	
+	# Makefile for hello.c
+	# Modified from Rubini & Corbet, 2001, chap 2
+	# - Paul Chin
+	#KERNELDIR can be this /usr/src/linux-2.4.18-14 or:
+	KERNELDIR = /usr/src/linux-2.4
+
+	# touch .config first, without it, make complains
+	include $(KERNELDIR)/.config
+
+	CFLAGS = -D__KERNEL__ -DMODULE -I$(KERNELDIR)/include -O -Wall
+
+	hello.o:hello.c
+
+	#---EOF---
+
+	The makefile will resolve the kernel version dependencies via the 
+	KERNELDIR variable.
+
+
+	To insert the module,
+	
+		insmod hello.o
+	
+	To remove the module,
+
+		rmmod hello
+
+	To see a list of loaded modules,
+
+		lsmod (will list the contents of /proc/modules)
+
+	To see list in kernel symbol table,
+
+		ksyms (will list the contents of /proc/ksyms)
+
+	If the klogd level is set to small number eg, 0, the module
+	printk() won't print output to console, but only output to syslog. 
+	A good level is 7 (the default in most settings), so that it
+	will print to console.
+
+	To set the klogd level to 7, stop the klogd first:
+
+		ps -ax (to get the PID)
+		kill -HUP pidnumber
+		kogd -c 7
+	
+	Device drivers are written as modules and loaded as above.
+
+	
+	
+3.	Creation of device emulation software
+	
+	According to Rubini (1998), when dealing with unusual hardware,
+	it is good to start by writing software in user space. This
+	way, one could manage the hardware without the risk of hanging
+	the whole system. Once that is done, encapsulating the software
+	in a kernel module should be a painless operation.
+
+3.1 	Creating a device
+
+	Use the following command to create a new device:
+		
+		mknod ./lp0 c 6 0
+	
+	The above creates a device named lp0 of type character with
+	major device number 6 and minor device number 0.
+
+	Major device number associates the device driver with the 
+	hardware. Minor device drivers distinguishes the individual
+	devices (eg, there may be more than one printer, or hard disks).
+
+	User space programs do not need to create the devices, since
+	all the recognized devices are already in the /dev directory.
+
+	Character devices are serial stream devices, eg, serial &
+	parallel ports, terminal devices, sound cards.
+
+	Block devices read and write in fixed-size blocks, eg
+	disk drive, and provides random access to data.
+
+
+3.2	 Accessing devices
+	
+	Devices are accessed by opening files (since all devices 
+	are represented as files) in the usual way.
+
+	To print,
+
+		cat document.txt > /dev/lp0
+
+	Or, in program form,
+	 
+	 	FILE *fd;
+	 	int fd = open("/dev/lp0", O_WRONLY);
+		write(fd, buffer, buffer_length);
+		close(fd);
+
+
+	Or, to play a sound,
+
+		cat music.au > /dev/audio
+
+	Or, to output text to another terminal,
+
+		echo 'hello there' > /dev/tty2
+
+
+3.3 	Device Simulation
+
+	The virtual devices below do not really exist as hardware. They can be used to test programs:
+
+	/dev/null 		- black hole, eats up everything,
+				  gives out nothing	
+	/dev/zero		- infinitely full of zero bytes
+	/dev/full		- always full, no more room
+	/dev/random		- generates random number based on user actions
+	/dev/urandom		- nonblocking random number generator
+
+Try these commands:
+
+	od -t X1 /dev/random
+	od -t X1 /dev/
+
+3.4  Controlling devices
+
+	Use the ioctl() system call to control I/O devices. For example, 
+	to eject the cd-rom,
+
+	#include <fcntl.h>
+	#include <linux/cdrom.h>
+	#include <sys/ioctl.h>
+	#include <sys/stat.h>
+	#include <sys/types.h>
+	#include <unistd.h>
+
+	int main (int argc, char* argv[])
+	{
+  	/* Open a file descriptor to the device specified on the command line.  */
+  	int fd = open (argv[1], O_RDONLY);
+  	/* Eject the CD-ROM.  */
+  	ioctl (fd, CDROMEJECT);
+  	/* Close the file descriptor.  */
+  	close (fd);
+
+  	return 0;
+	}
+
+	To run,
+	
+	./a.out /dev/cdrom
+
+
+	The command line version is:
+
+	eject
+
+	close cd-rom tray:
+
+	eject -t
+
+
+	References
+	----------
+	Rubini, A (1998). Linux Device Drivers. O'Reilly
+
+	Rubini, A. & Corbet,J. (2001). Linux Device Drivers (2nd ed). O'Reilly
+
+	Mitchell, M., Oldham, J., & Samuel, A. (2001). Advanced
+	Linux Programming. New Riders.
+
+

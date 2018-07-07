@@ -1,0 +1,80 @@
+SECURITY 2 - Overview of General Concepts
+-----------------------------------------
+
+Objective
+---------
+To give a general  overview of some Security concepts
+
+
+Intro
+-----
+Security is too wide a topic to fit into just one short
+chapter, as such this Chapter will only briefly skim through
+some general concepts.
+
+Passive attacks vs Active attacks 
+---------------------------------
+"Passive attacks" refer to sniffing or mining for information
+that could be used in an active attack.  It includes using
+sniffers (protocol analyzers), traffic analysis, social
+engineering, keyloggers, remote desktop capture, DNS queries,
+mapping network and domain architecture and trust relationships.
+
+
+"Active attacks" are those in which the attacker actively
+tries to gain unauthorized access to a network or system, or, 
+deliberately causes the system to become incaccessible (Denial of
+Service).
+
+
+Physical Security 
+-----------------
+Refers to the physical location of computer equipment, eg, 
+access to server room, exposure of network cables, power supply,
+switches, routers.
+
+System Security
+---------------
+Security of the Operating System, or, server programs. Usually
+software bugs are exploited to cause O.S. or server programs to
+execute unauthorised commands. 
+
+
+Network Security
+----------------
+Security of the network devices, eg, routers, firewall, gateways.
+
+
+Penetration attacks vs Denial of Service attacks
+------------------------------------------------
+Penetration attacks - where attacker's goal is to get access to the
+system, eg, spoofing based attacks, buffer overflow attacks.
+
+Denial of Service attacks - where attacker's goal is to cause services
+to be delayed or become inaccessible, eg, malicious code, virus,
+email flooding, worms. 
+
+
+Security Policy
+---------------
+A list of what users are allowed to do or not allowed to do, which
+machine is allowed to access services, what services are allowed to
+users/machines.  What to do in the event of a compromise.
+
+Whether or not a system has been compromised depends on the security
+policy.
+
+
+Security Mechanisms
+-------------------
+Authentication, encryption, packet filtering(firewalls), content
+filtering (proxy servers).
+
+
+Factors contributing to increase in security incidents
+------------------------------------------------------
+1. Automation and speed of attack tools.
+2. Increased sophistication of attack tools.
+3. Faster discovery of vulnerabilities.
+4. Lack of duty of care in ensuring secure systems/networks.
+5. Growth of the Internet.

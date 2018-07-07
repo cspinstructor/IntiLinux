@@ -1,0 +1,196 @@
+SYSTEM CALLS
+============
+
+Objective
+---------
+Understanding System Calls
+
+
+1.	Introduction to the facilities offered by an operating system.
+
+	An Operating System consists of the kernel and the facilities.  
+	The facilities are the programs that enable the user to interact with 
+	the kernel and, through the kernel, to interact with the hardware.  
+	According to Rubini (1998), a facility is a new functionality, be it a
+	whole driver or a new software abstraction, that can be accessed by an
+	application. Facilities also mean a functionality, a driver, or 
+	software abstraction, that can be accessed by an application
+	(Rubini, 1998).  Fig. 1 shows the relationship between Facilities, Kernel and Hardware.
+
+	Facilities <--> Kernel <--> Hardware
+
+			Fig. 1
+
+	Examples of facilities are the various programs, eg, in Unix:	
+
+	ls = for listing the directory contents
+	cd = to change directory
+	mkdir = to make directory
+	rm = to delete file
+	cp = to copy file
+	mv = to move file
+	ps = to list processes(programs) running on the computer
+	kill = to terminate a process
+	touch = to create an empty file
+	cat = to display the contents of a file
+	grep = to search for characters within a file
+	passwd = to change password
+				
+
+
+
+
+2.	Modification and creation of Operating System facilities
+	
+2.1	Modifying the 'ls' facility of Unix
+	The 'ls' facility is to list the contents of a directory. A programmer
+	could write his own ls 	program to replace the one that came bundled with the Operating System.
+
+	For example,
+		/* ls - a modified version of ls */
+		#include <stdio.h>	
+		main()
+		{
+			printf("This is a modified version of 'ls'\n\n");
+			system("ls");
+		}
+
+	or, 
+
+	
+	#include <stdio.h>
+	void main()
+	{
+		char *name[2];
+	
+		name[0]="/bin/ls";
+		name[1]=NULL;
+	
+		execve(name[0], name, NULL);
+		exit(0);
+	}
+
+
+
+		
+2.2	Creating a rudimentary shell in Unix
+
+	A 'shell' is the command interpreter. Is is the interface, 
+	or middle man, between the User and the machine.  Example of shells:
+			# = the root shell
+			$ = the bourne shell (normal user shell)
+	The shell is just a program in the folder '/bin/sh'.
+	To create a shell, just run the program 'sh' above. 	
+	For example, at the shell prompt, type the following and press enter:
+			/bin/sh
+
+	Another example,
+			/*  shell.c - to create a shell */
+			#include <stdio.h>
+			main()
+			{				
+				system("/bin/sh");
+			}
+	
+	or,
+
+	#include <stdio.h>
+	void main()
+	{
+		char *name[2];
+	
+		name[0]="/bin/sh";
+		name[1]=NULL;
+	
+		execve(name[0], name, NULL);
+		exit(0);
+	}
+
+
+2.3	Creating a new facility for the Operating System	
+	
+	Any programs written by the programmer becomes a new facility.
+	For example the following program counts the number of
+	files/directories in the directory and prints the result to screen:
+
+		/* file_count.c - to count the number of
+		 * files and directories 		 */		
+		#include <stdio.h>
+		main()
+		{			
+			system("ls | wc -l");
+		}
+
+
+2.4	New facilities can be creating by incorporating system calls in new different ways
+		
+	The list of system calls are listed in:
+
+			/usr/include/asm/unistd.h
+
+	All facilities/programs makes use of system calls in order to achieve their tasks.
+	To find out what system calls a particular facility makes, use strace, eg,
+
+	strace ls
+
+	will list all the system calls that the ls command makes. 
+
+
+	Example:
+
+	strace -o strace.txt /bin/ls
+	cat strace.txt
+
+	execve() 
+	open()
+	fstat64()
+	old_mmap()
+	read()
+	mprotect()
+	read()
+	brk()   
+	mmap2()
+	rt_sigaction()
+	ioctl()
+	write()
+	munmap() 
+	exit()   
+
+	[ truncated and cleaned for readability ]
+
+
+
+2.5	Kernel symbols
+	---------------
+	These are list of system calls exported by the kernel.
+	Exported means that they can be called by application
+	programs, including LKM's. To see these exported kernel
+	symbols:
+
+		cat /proc/ksyms
+
+	Notice that as of kernel 2.4.18, onwards (upto 2.5 at
+	time of writing) , Redhat 8, 9 distros as well as 
+	Linus Torvalds have discontinued the export of
+	sys_call_table().  This is to prevent third party programs
+	from inserted non open source binaries into the kernel.
+	This is to ensure that all third party binaries conform to
+	open source licensing and other conditions. This unexport
+	of the sys_call_table() gives rise to System Call Interception
+	programs, although some programmers have come up with 
+	patches and workarounds. However, for mainstream Linux
+	kernel in the future, we cannot rely on these patches
+	but must probably turn to other ways to intercept System
+	calls, eg, User Level System Call Interposition using
+	the /proc device.
+
+
+
+	References
+	----------
+
+	Rubini, A (1998). Linux Device Drivers. O'Reilly, p 24
+
+
+
+

@@ -1,0 +1,16 @@
+
+http://web.archive.org/web/20111118054831/http://iicpen.intipen.edu.my:80/~paul/research.html
+
+http://cachedview.com/
+
+https://archive.org/web/
+
+
+http://iicpen.intipen.edu.my:80/~paul/Experiments/Eggbreaker.txt
+
+
+
+Eggbreaker (Defends against all shell-spawning exploits
+
+
+Userlevel Shell Monitoring as Countermeasure against BOF exploits

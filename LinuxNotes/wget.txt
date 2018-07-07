@@ -1,0 +1,52 @@
+WGET
+====
+
+Objective
+---------
+Automating mirroring of web-sites and 
+downloading of specific filetypes.
+
+
+Program
+-------
+wget
+
+It runs non-interactively and hence excellent for
+scripting and automation.
+
+
+Usage
+-----
+
+To mirror a web-site:
+
+
+#!/bin/sh
+
+WEBSITE=192.168.20.3/~paul/
+wget --mirror --convert-links --html-extension $WEBSITE
+
+
+Put the above script in crontab and leave it to
+auto-update daily.
+
+Your server will then become a mirror of the target $WEBSITE.
+
+The --convert-links option means to convert all the cgi, asp,
+php file extensions into .html extensions.
+
+
+Downloading only jpg files
+--------------------------
+
+#!/bin/sh
+
+WEBSITE=www.thestar.com.my
+wget -r -l2 --no-parent -A.jpg  $WEBSITE
+
+
+r = recursive
+l2 = levels 2, ie, download 2 levels deep
+no-parent means do not download the parent html file
+
+

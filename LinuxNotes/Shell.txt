@@ -1,0 +1,423 @@
+SHELL PROGRAMMING
+=================
+
+Objective
+---------
+To be able to write programs for the bash shell. Commonly 
+called shell scripts. Shell scripts are used for writing
+operating system configuration files and creating new and
+powerful applications by combining unix utilities. 
+Networking heavily relies on shell scripts to initialize
+and control all network and system tasks.
+
+
+Overview
+--------
+Unix is designed with many utilities, each doing a specific 
+function.  A shell script combines these utilities in myriad
+different ways to accomplish sophisticated and complex tasks. 
+Shell scripts can do in a fraction of the size it takes a 
+C program to do. To get the best of both worlds, if a particular
+utility does not exist for a specific task, write a new utility
+using C, then use shell scripts to put that new utility to work
+with other utilies. Put C and Shell together and you get a 
+killer combination. Unix utilities is like the screwdriver, wrench,
+nuts, bolts, hammer, etc.  And a shell script is like a list saying
+use a screwdriver to screw in a screw, then use a hammer ...
+
+The shell is the command interpreter. Whatever is typed at
+the shell is interpreted and run by the computer . It is therefore
+possible to list commands in a file and save it as a shell
+program, or, also commonly called shell scripts.
+
+For example, to list the files in the directory,
+
+	ls
+
+You could put it in a file called List.sh:
+
+	#!/bin/sh
+	# This is a simple program to list files
+	ls
+
+Note that the first line "#!/bin/sh" tells the computer that
+it should use the "/bin/sh" program (ie the shell) to interpret
+the file.  The first hash "#" is necessary.  The second line also
+has a hash and it is a comment.  The hash precedes comments.
+Comments will not be executed.
+
+Then make it executable:
+
+	chmod 755 List.sh
+
+
+Then run it
+
+	./List.sh
+
+Let's modify it to print a message:
+
+	#!/bin/sh
+	# This is a simple program to list files
+	echo 'Listing the Directory...'
+	ls
+
+The program will print a message:
+
+	Listing the Directory...
+
+then lists the contents of the directory.
+
+
+
+
+Microsoft DOS files
+-------------------
+Microsoft DOS file format has character encoding '\015' inserted
+throughout the file. This is not a printable character and as such
+you can't see it, but it is there. This happens if you download .txt
+or html files from the Internet or you save a file on Windows and 
+transfer it to Linux.
+
+Shell scripts and source codes may not compile because of this.
+To remove the '\015' character, do this;
+
+
+	tr -d '\015' < infile.txt > outfile.txt
+
+Another way is:
+
+	dos2unix filename
+	unix2dos filename
+
+
+	
+Environment Variables
+---------------------
+Environment variables are the settings and configuration of
+a user's terminal or path or location of various utilities
+or preferences, or, state of the execution of commands.
+It is also through these variables that a process passes 
+parameters or data between one process or task and another
+process or tasks.
+
+To show all environment variables:
+
+	set
+
+To set a variable:
+
+	x=1
+
+To print the variable to screen:
+
+	echo $x
+
+To delete the variable:
+
+	unset x
+
+If you echo $x now, nothing is printed.
+
+You could also evaluate expressions, eg, to add 1 + 2,
+
+	echo `expr 1 + 2`
+
+However it is probably easier to use the calculators
+"dc" and "bc" , where "bc" is easier to use.
+
+
+If you see ^H everytime you press the Backspace key,
+do this:
+
+	$  stty erase ^H
+
+Other important environment variables:
+
+	echo $HOME
+	echo $PATH
+
+
+Equality and Inequality Operators
+---------------------------------
+int1 -eq int2 		int1 is equal to int2
+int1 -ne int2		int1 is not equal to int2
+int1 -lt int2		int1 is less than int2
+int1 -le int2		int1 is less than or equal to int2
+int1 -gt int2 		int1 is greater than int2
+int1 -ge int2		int1 is greater than or equal to int2
+
+
+String Comparisons
+------------------
+str1 = str2		str1 is identical to str2
+str1 != str2		str1 is not identical to str2
+str1			str1 is not NULL or not defined
+-n str1			str1 is not NULL and is defined (does exist)
+-z str1			str1 is NULL and is defined (does exist)
+
+
+
+File Descriptors
+---------------
+0 = standard input
+1 = standard output
+2 = standard error
+eg,
+	$ gcc *.c 2>errors
+	redirects standard error (2) to a file called errors
+	note no space between "2", ">" and "errors"
+
+eg,
+	some_command 2>&1
+
+
+Background process
+------------------
+ls > listfile &
+
+The ampersand is to make the process run in the background
+
+To wait for a process is finished before proceesing
+
+	wait process-id
+
+
+Passing arguments to shell 
+--------------------------
+$0 is path
+$1 is first variable
+$2 is second variable....
+$# is total number of arguments
+$* is all the variables
+$? is result of execution, 0 is success, 1 is error
+
+eg,
+	echo $0
+	echo $?
+
+
+Command Separator
+-----------------
+; (semicolon) to separate commands, eg
+
+$ test -f /etc; echo $?
+
+if [ num1 -eq num2 ]; then
+    echo "$num1 is equal to $num2"
+fi
+
+
+Testing File Types
+------------------
+
+Test		True if
+------------------------
+-s		A non-empty file
+-f		A file and not a directory
+-d		A directory and not a file
+-w 		Is writeable
+-r 		Is readable
+-b 		block device
+-c		character device
+-g		sticky bit set, always resides in memory
+-p		named pipe
+-r		read only by this shell
+-t		file descriptor for standard output
+-u		the file has root privilege
+-w		writeable by this shell
+-x		executable
+
+
+Negative Operators
+------------------
+eg,
+[ ! x1 = x2 ]
+[ x1 != x2 ]
+both are false, ie $echo $? is 1
+
+
+Logical Operators
+-----------------
+! exp		exp expression is negated
+exp1 -a exp2	if exp1 AND exp2 are both true, 
+		this is true otherwise it is false
+exp1 -o exp2	if either exp1 OR exp2 is true, 
+		this is true otherwise it is false
+
+
+Input
+-----
+read - used when you want to prompt user for input, eg
+
+script:
+echo "Enter name"
+read name
+echo "Your name is: $name"
+
+$1 - used when you do not prompt user, but instead enter 
+the arguments after the command, eg if you have a script
+called Print:
+
+
+	# Print  
+	#!/bin/sh	
+	echo $1
+
+To execute type:
+	
+	./Print Hello 
+
+The program will print the first argument passed to it,
+ie, $1:
+
+	Hello
+
+
+
+continue & break
+----------------
+continue & break can be used in "for", "while" loops
+
+echo -e
+--------
+echo -e "Anything \c"
+
+The "-e" option means to enable echo to parse escape characters, 
+"\c" in the above example
+
+echo escape characters
+----------------------
+use with "echo -e"
+
+eg
+echo -e "Anything \c" (above)
+
+\a	Alert (bell)
+\b	Backspace
+\c	Suppress trailing newline
+\f	Form feed (new page)
+\n	New line (line feed)
+\r	Carriage return
+\t	Tab
+\\	Another \
+\nnn	Explicit ASCII code for a character in octal
+
+Therefore, the command
+
+	echo -e "Wake up \a"
+
+would print the message "Wake up" and beep once.
+If you wanted it to beep more than once then you need
+to put sleep into it, eg, a script called Beep:
+
+	# Beep
+	#!/bin/sh
+	echo -e "Wake up \a"
+	sleep 1 #sleep 1 second
+	echo -e "Wake up \a"
+
+What if you wanted to connect to the Internet and you
+would like to know once a connection is successul?	
+You could try something like this:
+
+		
+	#!/bin/sh
+	# AdslBell.sh
+	# beeps continuously if ADSL line is connected
+	# crontab -e it to run every minute
+	# -  Paul Chin   Sept 23, 2002
+
+	/sbin/ifconfig > ifconfig.txt
+ 
+	if  grep ppp0 ifconfig.txt     
+	then
+  		while [ 0 ]
+		do
+			# \c to suppress newline
+			echo -e '\a\c' 
+			sleep 1
+		done
+	fi
+
+
+You could put it on the crontab as follows:
+
+	crontab -e
+
+The new entry:
+
+	0-59 * * * * /home/root/AdslBeep.sh
+
+
+Path Variable
+-------------
+Edit .bash_profile by appending new path to the PATH 
+variable, eg
+
+PATH:$PATH:$HOME/bin:/usr/TEMP
+
+Then execute the .bash_profile as follows:
+
+	. .bash_profile
+
+Alternatively, logout and login again.
+The login sequence is:
+
+	$. /etc/profile
+
+	$. $HOME/.bash_profile (or,  $HOME/.profile)
+
+
+
+Prompt Variable
+---------------
+To change prompt PS1, edit .bash_profile
+add:
+
+	"What's next boss?"
+
+export PS1
+
+execute:
+
+	. .bash_profile
+
+Your prompt is now:
+
+	What's next boss?
+
+
+
+Change shell
+------------
+To change bill's shell to ksh,
+
+	usermod -s /bin/ksh bill
+
+
+Change file directory ownership
+-------------------------------
+To change directory mydir to bill of group admin:
+
+	chown bill:admin mydir
+
+
+
+To email most recent file to you
+--------------------------------
+
+#!/bin/sh
+#Assuming u want to mail most recently created
+#file in dir /home/paul/Dir/
+
+#List in chronological order
+#with most recent on top and output to temp.txt
+ls -t /home/paul/Dir/ > /home/paul/temp.txt
+
+#Extract the fist line in temp.txt and assign to
+#variable "filename"
+filename=`head -n1 /home/paul/temp`
+
+#mail it
+mail paul@pqr.com < /home/paul/Dir/$filename

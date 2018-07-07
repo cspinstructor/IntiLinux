@@ -1,0 +1,203 @@
+RADIUS  (Remote Authentication Dial In User Service)
+====================================================
+
+Objective
+---------
+[1] Installing and running Cistron RADIUS server.
+[2] Installing and running NAS.
+
+
+
+
+What is it?
+-----------
+RADIUS  stands for Remote Authentication Dial In User Service.
+and was invented by Lucent Internetworking and is officially known
+as the Internet standard RFC2865.
+
+Cistron Radius is an Open Source implementation.
+Basically it is an authentication and accounting server that speaks the 
+RADIUS protocol. 
+
+Commonly used by ISP's to authenticate user dial up internet service.
+
+Development has since moved to the FreeRADIUS server, but Cistron RADIUS
+presently continues to have a wide user base.
+
+
+
+Architecture
+-------------
+In an ISP Setting, the Internet User dials the Network Access Server ("NAS")
+modem, the NAS answers and obtains the login and password and connects to
+RADIUS Server for Authentication and Accounting.  The architecture is as shown
+in Fig A. below.
+
+				       
+     Internet User                  
+ 	  modem  <----->   modem                     
+			 NAS Server <------> RADIUS 
+			     ^               Server
+			     |
+			     |
+			     V	
+			  Routers <-----> Internet	
+
+
+
+	    Fig. A. Dialing up an ISP 
+	    -------------------------
+
+The NAS contacts the server each time the User connects or disconnects so that
+the RADIUS server can keep proper Accounts.
+
+We are going to install Cistron Radius and Portslave on the same machine.
+Portslave is one of the Radius Clients and is an example of NAS.
+It is also known as a terminal server that does PPP and authenticates
+via RADIUS.
+
+
+[ CISTRON RADIUS INSTALLATION ]
+
+Where to get it
+---------------
+Download:
+
+	radiusd-cistron-1.6.6.tar.gz
+
+from
+
+	http://www.radius.cistron.nl/
+
+Copy it to /usr/local/radius, unpack the tarball:
+
+	tar zxvf radiusd-cistron-1.6.6.tar.gz
+
+Enter the new directory:
+
+	cd radiusd-cistron-1.6.6
+
+Read the INSTALL file.  Basically it says to enter the
+src directory and copy the Makefile.lnx (for Linux) to Makefile.
+However, no need to do that, because a diff showed that 
+Makefile is set default for Linux. So, enter the src directory,
+
+	cd src
+
+And just run make:
+
+	make
+
+The binaries will be compiled, then install:
+
+	make install
+
+
+
+Configuration
+-------------
+Enter the redhat directory, you will find:
+
+	rc.radiusd-redhat
+
+copy it to /etc/rc.d/init.d as rc.radiusd.init:
+
+	cp rc.radiusd-redhat /etc/rc.d/init.d/radiusd.init
+
+
+You need to change the following two lines in the radiusd.init script:
+
+	RADIUSD=/usr/sbin/radiusd
+	RADRELAY=/usr/sbin/radrelay
+
+to
+
+	RADIUSD=/usr/local/sbin/radiusd
+	RADRELAY=/usr/local/sbin/radrelay
+
+Confirm first with whereis:
+
+	whereis radiusd
+	whereis radrelay
+
+
+
+Help
+----
+The man pages are in:
+
+	man 8 radiusd
+
+
+
+
+Starting the RADIUS daemon
+--------------------------
+
+To start radiusd:
+
+	/etc/init.d/radiusd start
+
+To stop:
+
+	/etc/init.d/radiusd stop
+
+Do a netstat :
+
+	netstat -uan
+
+You will notice that it listens on 2 udp ports:
+
+	udp	1812 
+	udp 	1813
+
+
+To confirm that they are radius, 
+
+	lsof -i udp:1812
+	lsof -i udp:1813
+
+	1812  -- radius
+	1813  -- radius-acct
+
+
+Port 1812 is the main radius port whilst 1813 is for Accounting.
+
+
+Monitoring
+----------
+radwho will show who is logged in.
+
+Others:
+
+last -f /var/log/radutmp
+last -f /var/log/radius.log
+
+
+
+[PORTSLAVE INSTALLATION]
+
+Where to get it?
+----------------
+
+Download portslave-2002.10.21.tar.gz  via 
+http://www.tuxfinder.com
+
+
+Installation
+------------
+tar zxvf portslave...
+
+cd portslave...
+
+./configure
+
+
+
+Note
+----
+I have managed to get the Cistron RADIUS working but unable to field test
+it yet since i have not completed the Portslave Installation.
+
+
+

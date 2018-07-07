@@ -1,0 +1,135 @@
+BASIC LINUX COMMANDS
+====================
+
+Objective
+---------
+This chapter will introduce the basic linux commands:
+
+	ls, pwd, cd, mkdir, touch, rm, cp, mv
+
+The Shell
+---------
+The shell is where the user types commands. Typically a shell looks like this:
+
+	$_
+
+The user types commands at the shell prompt.
+
+
+Linux Directory Structure
+-------------------------
+The structure of the Linux directory tree is shown in Fig A below:
+
+			/
+
+			|
+			|
+  -----------------------------------------------------------------
+  |     |    |     |    |    |    |    |    |     |    |     |     |      
+ bin  sbin  dev  home  lib  var  etc  tmp  proc  usr  boot  root  opt
+
+
+
+   
+                 Fig A  Linux Directory Structure
+	
+
+Default Directory
+-----------------
+Whenever a user logs in, he will end up in his home directory under
+the directory home. Eg, if his user name is adrian, he will end up
+in the directory:
+
+	/home/adrian
+
+
+Listing Directory
+-----------------
+To list the contents of the directory, type "ls" at the shell prompt.
+To list the details of the directory, use "ls -l".
+
+	$ls -l
+
+
+Print Working Directory
+-----------------------
+To find out where you are, type "pwd" which stands for "print working
+directory".
+
+	$pwd
+
+
+
+Changing Directory
+------------------
+To change to another directory, type "cd [new directory]".
+For example, if user "adrian" has a subdirectory "MyDir" in his 
+home directory,
+
+	$cd MyDir
+
+To return or go up to a parent directory,
+
+	$cd ..
+
+If you keep typing "cd ..", you will continue to go up to the parent
+directory until you reach "/", the root directory.  You can't go any 
+higher than that.  
+
+Note:  Do not confuse the "/" directory with the "/root" directory. 
+The latter is where the administrator keeps his files. The system 
+administrator is also known as root.
+
+Another way of changing directory is to use the full pathname:
+
+	$cd /tmp
+
+The above will change to the "tmp" directory under the "/" root
+directory.
+
+If you type "cd" without any paramters, you will go straight to your
+own directory, no matter where you may be in the directory tree.
+
+
+Summary
+=======
+
+cd  [ Change Directory ]
+-----------------------
+cd /home/tmp
+to go back to home directory, just type cd and enter
+
+cp  [ copy file ]
+-----------------
+cp sourcefile  destinationfile
+
+ls  [ List Directory ]
+---------------------
+ls -l  [ full listing ]
+ls     [ short listing ]
+
+mv  [ move file or rename file ]
+-------------------------------
+mv file1  /tmp [ moving ]
+mv oldname newname [ renaming ]
+
+
+
+
+
+vi Editor
+---------
+
+Command mode ------------->  Insert Mode
+              i,I,o,O,a,A
+
+            <-------------
+                [ esc ]
+
+:wq      write and quit
+:q!      quit without saving
+yy		 copy 1 line
+3Y       copy 3 lines
+p 		 paste
+v        visual mode
+:r !ls   reads the result of ls into current file

@@ -1,0 +1,159 @@
+EMAIL
+=====
+
+Objective
+---------
+To set up an SMTP email Mail Transfer Agent that accepts
+relaying from within the LAN to Internet and a POP server
+for remote mail retrieval.  
+
+To connect and interact with SMTP and POP servers.
+
+
+Sendmail
+--------
+A mail transfer agent, commonly abbreviated MTA is a server
+that receives email from email clients, called Mail User Agents
+or, MUA, to send to other email MTA's.  
+
+Sendmail is an MTA.  The configuartion file is 
+
+	/etc/sendmail.cf 
+
+and the only settings which we need to concern ourselves with are:
+
+	
+	Cwfar.scape.net
+        #Cwlocalhost	
+	#O DaemonPortOptions=Port=smtp,Addr=127.0.0.1, Name=MTA
+
+where, far.scape.net, is the host name that runs sendmail, and
+the Cwlocalhost and DaemonPortOptions are commented out so that
+it will accept request for email forwarding from any hosts within
+the LAN.  Substitute your server's name in place of far.scape.net.
+
+To start or stop sendmail,
+
+	/etc/rc.d/init.d/sendmail  start|stop
+
+
+POP
+---
+The pop server is to receive remote requests from email clients
+to retrieve mail from the mail box. All emails are store in
+
+	/var/mail/username
+
+where username is the account name of the user.  
+To start or stop the pop server,
+
+	chkconfig ipop3 on|off 
+
+To find out whether any pop servers are running;
+
+	chkconfig --list | grep pop
+
+
+
+Connecting to SMTP Servers
+--------------------------
+To connect to an MTA, we could use any client, eg, Kmail. In the
+settings dialog box, set the mail server's IP or domain name.
+Port number is 25.
+
+Alternatively, we can telnet to port 25, eg:
+
+	telnet smtp.farscape.net 25
+	[ server replies ]
+	
+	helo stargate
+	[ server replies ]
+	
+	mail from:carter@stargate.net
+	[ server replies ]
+
+	rcpt to:sun@farsape.net
+	[ server replies ]
+
+	data
+	[ server replies ]
+
+	subject:Worm Holes
+	date:Dec 25, 2000
+	from:carter@stargate.net
+	to:sun@farscape.net
+	cc:crichton@farscape.net
+	[  a blank line ]
+	Dear Sun,
+
+	We have a stargate.
+	Are u interested in sharing your 
+	wormhole technology?
+
+	Regards,
+	Carter
+	<CRLF>
+	.
+	<CRLF>
+	
+	[ server replies ]
+	quit
+
+
+Note that <CRLF> above means  \r\n.\r\n , or, simply
+[Enter key].[Enter key].  Programmatically you could send
+"\r\n.\r\n", if you are writing a program to talk to an SMTP
+server.	
+
+Note that the "mail from:" and "from:" parameters above could
+be spoofed. This is subject to abuse and possibly spamming.
+As such most SMTP servers have disabled email relaying, and
+only allows emails to be forwarded to its own domain. For 
+example, you can connect to smtp.farscape.net to send and
+email to sun@farscape.net, but, you cannot use smtp.farscape.net
+to send email to theone@matrix.net . 
+
+
+Connecting to POP servers
+-------------------------		
+You could use the GUI based Kmail described above. Just set
+the pop email domain name or IP address and set the port to
+port 110.
+
+Alternatively, use fetchmail:
+
+	fetchmail pop.farscape.net -P 110 -u sun
+
+where pop.farscape.net is the pop server, -P 110 specifies
+the port number as 110 and -u sun specifies the username to
+connect as, in this case the username is "sun".
+
+Alternative, use telnet,
+
+	telnet pop.farscape.net 110
+	[ server replies ]
+
+	user sun
+	[ server replies ]
+
+	pass moya134
+	[ server replies ]
+
+	stat
+	[ server replies with list of emails ]
+
+	retr 1
+	[ server sends first email ]
+
+	dele 1
+	[ server deletes first email ]
+
+	retr 2
+	[ server sends second email ]
+
+	dele 2
+	[ server deletes second email ]
+
+ 	quit
+
+	

@@ -1,0 +1,226 @@
+MySQL
+=====
+
+Objective
+---------
+Configuring and running MySQL Server.
+
+
+Getting MySQL
+-------------
+MySQL is pre-installed in RedHat 7.2 Linux distribution.
+The most comprehensive guide is the MySQL Documentation
+available from the MySQL web-site. But it is not easy to read,
+hence, this chapter. 
+
+Installing Database
+-------------------
+The binaries are found in:
+
+	/usr/bin/
+
+To install the database, type:
+
+	mysql_install_db
+
+If you get an error about not being able to lookup hostname,
+you can set the hostname with this command:
+
+	hostname linux-1.society.intipen.edu.my
+
+After successfully running "mysql__install_db", start the 
+mysqld server:
+
+	/etc/rc.d/init.d/mysqld start
+
+
+The default built-in user is "root" and it has no password
+by default! To connect to mysqld server as root:
+
+	mysql -u user -p
+	Enter password: [Press Enter - since no password]
+
+	msql>
+
+Now you're in. First thing to do is change set root password.
+
+	msql>set password for root=password('toor');
+	Query OK, 0 rows affected (0.00 sec)
+
+Root password is successfully set as "toor". To quit:
+
+	msql>quit;
+
+
+
+The mysql databases are all located in:
+
+	/var/lib/mysql/
+
+
+
+Adding New Users
+----------------
+First, connect and login as root:
+
+	mysql -u root -p
+	Enter password:
+
+	mysql>
+
+Then, to grant all privileges for ALL databases to paul
+(blanket power!):
+
+	mysql>grant all privileges on *.* to paul@localhost
+             >identified by 'somepassword' with grant option;
+
+Paul can then connect while logged in at the localhost:
+
+	mysql -u paul -p
+	Enter password:
+
+	mysql>
+
+If Paul wanted to log in from a remote machine, he can't.
+To allow Paul to log in remotely, as root, do this:
+
+	mysql>use mysql;
+	mysql>grant all privileges on *.* to paul@'%'
+             >identified by 'somepassword' with grant option;
+
+Note the syntax:   paul@'%'
+It means paul can log in remotely from ANY host.
+You can also use:  paul@"%"
+
+For Paul to remotely log in, he should type:
+
+   mysql -u paul -p -h linux-1.society.intipen.edu.my
+
+
+Paul can change his password as follows:
+
+	mysql>set password for paul=password('secret');
+
+
+
+SQL
+---
+You can view tables as follows.
+First select a database, eg, to select "mysql" database:
+
+	mysql>use mysql;
+	
+To view the columns host, user and password from the user
+table:
+
+	mysql>select host,user,password from user;
+
+
+How to Create New Database
+---------------------------
+To create the database:
+
+	mysql>create database menagerie;
+        mysql>use menagerie;
+
+Then create a table:
+
+        mysql>create table pet (name VARCHAR(20), 
+             >owner VARCHAR(20),species VARCHAR(20),
+             >sex CHAR(1), birth DATE, death DATE);
+
+You can see the databases:
+
+	mysql>show databases;
+
+or, show tables:
+
+	mysql>show tables;
+              
+
+or, to see the datatypes for each field:
+
+	mysql>describe pet;
+
+
+
+You can load a new database from a text file where each
+field is separated by a TAB delimiter. Eg, you can save
+an excel file as .txt file with TAB delimiter. Then, to
+load the data into MySQL:
+
+	mysql>load data local infile "pet.txt"
+             >into table pet;
+
+
+To manually insert record:
+
+   mysql>insert into pet
+        >values('Puffball','David','rat','f',2000-01-01,NULL);
+
+
+To view all records for all fields:
+
+	mysql>select * from pet;
+
+To update a record:
+
+	mysql>update pet set name="David" where name="Bill";
+
+
+Login to preselected database
+-----------------------------
+To login to a specific database;
+
+	mysql -u paul -p mysql;
+
+
+Login to a specific host
+------------------------
+To login to a specific host;
+
+	mysql -u paul -p -h linux-1.society.intipen.edu.my
+
+
+Global database delete
+-----------------------
+If you mess up the databases really bad, do this as a last
+resort:
+
+	cd /var/lib/mysql
+	rm -fr *
+
+But make sure you know what you are doing!!
+
+Then, start from fresh:
+
+	mysql_install_db
+
+Remember, all your previous data is completely wiped out!
+
+
+Scripting
+---------
+MySQL commands can be run as a script with .sql extension,
+eg:
+
+snip........................................
+
+#!/bin/sh
+# sql.sh logins and runs the test.sql script
+
+echo Content-type:text/plain
+echo
+mysql -u paul -psecretpasswd < test.sql 
+
+snip.......................................
+
+snip..........................................
+
+use stu
+
+select * from student where name like "%";
+quit
+
+snip..........................................
+

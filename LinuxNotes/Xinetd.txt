@@ -1,0 +1,163 @@
+XINETD
+======
+	
+Objective
+---------
+How to start your own multi-user server.
+
+
+Hello World Server
+------------------
+Assuming you want to start a server that echoes
+"Hello World" whenever somebody connects to port 8888.
+This is an example:
+
+#!/bin/sh
+echo "Hello World"
+
+
+Save it as hello.sh and put it in /usr/local/bin
+
+
+Services file
+-------------
+
+Append this line to the /etc/services file:
+
+	hello	8888/tcp	
+
+
+
+Superserver (xinetd) configuration
+----------------------------------
+
+Add this file called hello to the directory /etc/xinetd.d/  :
+
+
+# Hello World service
+service hello
+{
+	disable	= no
+	socket_type		= stream
+	wait			= no
+	user			= root
+	server			= /usr/local/bin/hello.sh
+	nice			= 10
+}
+
+
+
+Starting the hello service
+--------------------------
+Restart the xinetd superserver:
+
+	/etc/init.d/xinetd restart
+
+or
+
+	killall -HUP xinetd
+
+Start the hello server:
+
+	chkconfig hello on
+
+chkconfig reads the file /etc/services and starts the service.
+
+
+
+Connecting to hello server
+-------------------------
+
+telnet <server IP> 8888
+
+and you will get message:
+
+	Hello World
+
+and promptly disconnects.
+
+
+Since it is managed by xinetd, it can accept multiple connections,
+again and again.
+
+
+
+Stopping the server
+-------------------
+
+	chkconfig hello off
+
+
+
+
+Controlling access
+------------------
+
+To control access, use the tcpd wrapper.  Insert this in /etc/hosts.deny:
+
+	hello:<IP address to block>
+
+
+Alternatively, instead of using tcp wrappers we use xinetd itself. Modify
+/etc/xinetd.d/hello by using the parameters:
+
+	no_access
+	only_from
+
+as explained below.
+
+
+Note that the xinetd access control priority is as follows:
+
+  Default             --> anyone can access
+  If no_access is set --> anyone can access except those listed by no_access
+  if only_from is set --> no one can access except those listed by only_from
+
+
+The example below denies access from
+
+	192.168.0.117 and 202.168.12.13
+
+# Hello World service
+service hello
+{
+	disable	= no
+	socket_type		= stream
+	wait			= no
+	user			= root
+	server			= /usr/local/bin/hello.sh
+	nice			= 10
+	no_access		= 192.168.0.117 202.168.12.13
+}
+
+
+
+
+
+The example below only allows acces from 
+
+	192.168.0.117 and 202.168.12.13
+
+# Hello World service
+service hello
+{
+	disable	= no
+	socket_type		= stream
+	wait			= no
+	user			= root
+	server			= /usr/local/bin/hello.sh
+	nice			= 10
+	only_from		= 192.168.0.117 202.168.12.13
+}
+
+
+
+Comparison with inetd.conf
+--------------------------
+Inetd uses tcpd wrappers which in turn reads /etc/hosts.allow and
+/etc/hosts.deny to control access.  xinetd also refers to them.
+But the rules in /etc/hosts.allow and deny is that hosts.allow takes
+priority over hosts.deny.  So we use hsots.deny to deny everyone, then
+use hosts.allow to control access, just like a firewall.
+
+See chapter Security.txt section TCP wrappers for details.

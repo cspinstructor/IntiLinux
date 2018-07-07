@@ -1,0 +1,319 @@
+WU-FTPD v 2.6.0
+~~~~~~~~~~~~~~~
+
+
+Vulnerability
+-------------
+http://cve.mitre.org
+CVE-2000-0573
+
+The lreply function in wu-ftpd 2.6.0 and earlier does not properly
+cleanse an untrusted format string, which allows remote attackers 
+to execute arbitrary commands via the SITE EXEC command.
+
+
+Architecture
+------------
+
+RH9 Notebook			  RH6.2 Server
+192.168.1.173 <------------------>192.168.1.172
+Intel Celeron			  Intel Pentium II
+500MHz				  350 MHz
+
+Fig A. Lab Setup for wu-ftpd exploit
+------------------------------------
+
+Also works against Intel Pentium 133 MHz.
+
+
+
+Attack program
+--------------
+
+7350wu-v5.tar.gz downloaded from:
+
+	http://teso.scene.at/releases.php
+
+released on 28 June, 2000
+by sc and z.
+
+
+extract to get directory: 
+
+	7350wu
+
+Then, 
+
+	cd 7350wu
+
+Read the Makefile which says target is "all". 
+Therefore, to compile:
+
+	make all
+
+You will get this binary:
+
+	7350wu
+
+To use:
+
+	./7350wu -t 1 -h 192.168.1.172
+
+where t 1 is linux.
+
+This exploit program works only for wu-ftpd <= 2.6.0 x86, as
+can be seen from the comments in the header of the
+source code 7350wu.c:
+
+
+/* 7350wu.c - wuftpd <= 2.6.0 x86/linux remote root exploit
+ *
+ * 2000/06/28 -sc. & z-.
+ *
+ * 2nd version, mass enabled, doh!
+ * 3rd version, multiple architectures
+ * 4th version, freebsd exploit
+ * 5th version, merged in some small chunks of code -sc.
+ *
+ * based heavily on smilers comments, initial ideas from tf8's and lamagra's
+
+
+
+RH6.2 server
+------------
+
+Redhat 6.2 is chosen because it runs the vulnerable version of the wu-ftpd
+program:
+
+	Version wu-2.6.0(1)
+
+which 7350wu exploits.
+
+Start the ftp server, edit:
+
+	/etc/inetd.conf
+
+by uncommenting the 'ftp' line, then restart the inetd
+server:
+
+	/etc/rc.d/init.d/inet restart
+
+Conversely, to stop the ftp server, comment out the ftp line
+in /etc/inetd.conf, then restart the inetd server.
+
+
+
+Attack
+------
+
+	./7350wu -t 1 -h 192.168.1.172
+
+Within 10 seconds, we get a root shell.
+
+On notebook we see:
+
+7350wu - wuftpd <== 2.6.0 x86/linux remote root (mass enabled)
+by team teso
+
+phase 1 - login... login succeeded
+phase 2 - testing for vulnerability... vulnerable, continuing
+phase 3 - finding buffer distance on stack... ###########
+   found: 1100 (0x0000044c)
+phase 4 - finding source buffer address... ##########
+   found: 0xbfffdadd
+phase 5 - find destination buffer address... ###########
+   found: 0x0xbfffae80
+phase 6 - calculating return address
+   retaddr = 0xbfffdcc5
+phase 7 - getting return address location
+   found 0xbfffce84
+phase 8 - exploitation...
+   using return address location: 0xbfffce84
+len = 510
+
+uid=0(root) gid=0(root) egid=50(ftp) groups=50(ftp)
+
+
+At this point, you can type in any commands, eg:
+
+	whoami
+	root
+	logout
+
+RH62 has been rooted.
+
+
+
+Analysis on RH62
+----------------
+
+tail -f /var/log/messages shows:
+
+	ANONYMOUS FTP LOGIN FROM 192.168.1.173, mozilla@
+
+mozilla@ is the anonymous password.
+
+
+netstat -tanp shows:
+
+  Proto ...  Local Address     Foreign Address      State        PID/Program name
+   tcp	     192.168.1.172:21  192.168.1.173:32869  ESTABLISHED  773/sh
+
+
+Note the last column which describes the Program name as: sh
+The normal ftp connection should be:
+
+  Proto ...  Local Address     Foreign Address      State        PID/Program name
+   tcp	     192.168.1.172:21  192.168.1.173:32869  ESTABLISHED  773/ftpd
+
+
+Note the program name is: ftpd
+
+This anomaly could be used as another possible marker for rogue shells, in addition to 
+/proc/pidnum/environ being null. That is, a port 21 connection should be used
+by ftpd, not sh.
+
+
+
+ps -aux shows:
+
+	USER  PID   ... TTY  COMMAND
+	root  773        ?   /bin/sh
+	 ^               ^
+          Possible markers
+
+Normal local root login should be:
+
+	USER  PID   ... TTY  COMMAND
+	root  773       tty1  -bash
+
+or for remote  login:
+
+	USER  PID   ... TTY   COMMAND
+	 v    773       pts/0  -bash
+
+
+In both normal logins, there should be a controlling TTY, but
+in a rogue shell, the TTY is: ?
+
+Also, a root USER with TTY ? is ok for services like
+init, kflushd, kupdate, kswapd, telnetd, etc but
+a USER root with TTY ? and using COMMAND /bin/sh is highly
+suspicious.
+
+
+	 
+Testing Eggbreaker
+------------------
+
+Eggbreaker is uploaded to RH62 and compiled:
+
+	cc eggbrk.c -o eggbrk
+
+Then, run by root as a background process:
+
+	./eggbrk &
+
+It logs to  /var/log/eggbrk.log.
+
+Notebook then repeats the attack:
+
+	./7350wu -t 1 -h 192.168.1.172
+
+On the notebook we still get the same initial startup
+progress:
+
+
+7350wu - wuftpd <== 2.6.0 x86/linux remote root (mass enabled)
+by team teso
+
+phase 1 - login... login succeeded
+phase 2 - testing for vulnerability... vulnerable, continuing
+phase 3 - finding buffer distance on stack... ###########
+   found: 1100 (0x0000044c)
+phase 4 - finding source buffer address... ##########
+   found: 0xbfffdadd
+phase 5 - find destination buffer address... ###########
+   found: 0x0xbfffae80
+phase 6 - calculating return address
+   retaddr = 0xbfffdcc5
+phase 7 - getting return address location
+   found 0xbfffce84
+phase 8 - exploitation...
+   using return address location: 0xbfffce84
+len = 510
+
+
+But fails to connect. 
+
+On RH62 tail -f /var/log/messages shows:
+
+	ANONYMOUS FTP LOGIN FROM 192.168.1.172
+	rh62 inetd: pid 996 exit signal 9
+
+Interspersed with it, stdout shows:
+
+	996 is rogue shell
+	kill ok
+
+And tail /var/log/eggbrk.log shows:
+
+	Wed Sept 10 15:04:37 2003
+	killed pid 996	
+
+Eggbreaker succeeded in detecting the rogue shell and terminating it.
+
+
+PPID Analysis
+-------------
+When wu-ftpd is attacked, it spawns /bin/sh.
+
+ps lax shows:
+
+
+  F   UID   PID  PPID PRI  NI   VSZ  RSS WCHAN  STAT TTY        TIME COMMAND
+140     0   390     1   0   0  1144  488 do_sel S    ?          0:00 inetd
+100     0   773    390   0   0  1644  740 tcp_re S    ?          0:00 /bin/sh
+
+Note that the rogue shell pid 658 has ppid 390, ie inetd.
+
+ 	pid 390		   pid 773
+	inetd    --------> /bin/sh
+
+
+	Fig B. Relationship between parent and rogue child
+	--------------------------------------------------
+
+inetd spawns ftp as and when needed and when an instance of an ftp 
+child is overunned, /bin/sh steps into that ftp child's shoes.
+
+
+cat /proc/390/status shows:
+
+
+Name:	sh
+State:	S (sleeping)
+Pid:	773
+PPid:	390
+Uid:	0	0	0	0
+Gid:	0	50	50	50
+Groups:	50 
+VmSize:	    1644 kB
+VmLck:	       0 kB
+VmRSS:	     740 kB
+VmData:	      60 kB
+VmStk:	       8 kB
+VmExe:	     292 kB
+VmLib:	    1208 kB
+SigPnd:	0000000000000000
+SigBlk:	0000000000000000
+SigIgn:	8000000000000004
+SigCgt:	0000000047817efb
+CapInh:	00000000fffffeff
+CapPrm:	00000000fffffeff
+CapEff:	00000000fffffeff
+
+
+Note Pid and PPid lines. This confirms pid 390 and parent of 
+pid 773.  And this is how we could modify eggbrk to log the 
+offending service which was attacked.

@@ -1,0 +1,267 @@
+SNORT
+=====
+
+Objective
+---------
+
+Snort is an Open Source IDS - Intrusion Detection System. Unlike, Tripwire,
+it detects attack attempts. Tripwire only detectes the Intrusion after
+the fact. In my humble opinion IDS's should rightly be called ADS - 
+Attack Detection Systems. IDS is a misnomer.
+
+	
+	Snort = ADS
+	
+	Tripwire = IDS
+
+
+
+
+
+Getting Snort
+-------------
+Latest version is Snort 2. The installation and startup is different.
+Skip to  SNORT 2 below.
+
+Available from: www.snort.org
+
+snort version 1.9.1 was used with RedHat Linux 7.2 in this project
+
+Install:   rpm -Uvh snort-1.9.1-1snort.i386.rpm
+
+
+
+Network Architecture
+---------------------
+
+                    Routing
+    Internet <-->  Firewall  <-->  IDS   <--> Hub <--> LAN
+                  [Iptables]     [Snort]
+
+
+
+		Fig 1.  LAN with Firewall and IDS
+		---------------------------------
+
+
+
+Fig 1 above shows the setup in my lab.
+
+The snort listens on interface ppp0 - the Internet interface.
+Note that ppp0 is linked to eth1, which does not have any
+IP address. 
+
+Internet is via ADSL which connects to eth1 physically.
+
+Routing Firewall and IDS are on the same machine. 
+
+
+
+Configuration
+-------------
+
+Configure the /etc/snort/snort.conf file
+
+snip.........................
+# or you can specify the variable to be any IP address
+# like this:
+
+var HOME_NET any
+
+# Set up the external network addresses as well.  
+# A good start may be "any"
+
+var EXTERNAL_NET any
+
+snip...............................
+
+
+
+Only enable the two variables above. The rest, do not
+set.
+
+
+
+
+Location of Log files
+---------------------
+
+In  /var/log/snort/
+
+
+
+
+
+Starting Snort
+--------------
+Create a script:
+
+
+[StartSnort.sh]
+
+#!/bin/sh
+snort -A full -c /etc/snort/snort.conf  &
+
+
+
+chmod 755 StartSnort.sh
+
+and start it:
+
+
+	./StartSnort.sh
+
+
+
+
+Comparing logs
+--------------
+
+At time of writing,  common attacks are the Web-IIS's ida, cmd.exe and scripts.
+Many Streamyx's machines 219.94.x.x and 219.93.x.x appear to be executing network
+scans for Web-IIS's vulnerabilities, including against Apache Servers!!??
+This causes widespread DoS (Denial of Service) - causing slow response times.
+
+
+
+Compare 
+
+
+	/var/log/httpd/access_log
+
+
+and
+
+	/var/log/snort/alert
+
+
+
+
+SNORT 2
+~~~~~~~
+
+snort-2.0.2-5.i386.rpm
+snortrules-stable.tar.gz
+
+Install:
+
+rpm -Uvh  snort-2.0.2-5.i386.rpm
+
+You may need to install libpcap first, just insert Redhat CD2
+and rpm -Uvh libpcap-....rpm
+
+
+Upon successful installation you will see this message:
+
+Fetch the latest snort rules file from:
+
+	www.snort.org
+
+Install the rules:
+
+cd /etc/snort
+tar zxvf snortrules-stable.tar.gz 
+
+You will get /etc/snort/rules directory containing all the rules and
+a duplicate copy of snort.conf which is already in /etc/snort
+
+Edit /etc/snort/snort.conf:
+
+	var RULE_PATH /etc/snort/rules
+
+
+Apart from the above, there is no need to change anything else in
+the snort.conf file. The defaults are OK.
+
+
+Then copy these 2 files from rules to /etc/snort:
+
+	classification.config
+	reference.config
+
+
+Then start snort:
+
+	/etc/rc.d/init.d/snortd start
+
+Check to see if it is OK:
+
+	/etc/rc.d/init.d/snortd status
+
+If you see:
+
+	snort dead but subsys locked
+
+Then, there is an error, snort did not start. To find out the error,
+do this:
+
+	tail -f /var/log/messages
+
+and correct the error accordingly. The most common errors are:
+
+	could not open rules files.....
+	could not open classification .config
+	could not open reference.config
+
+
+Not necessary to remove the lock file:
+
+	/var/lock/subsys/snort
+
+Just stop and restart snort after rectifying the problems.
+
+The log files are in:
+
+	/var/log/snort/
+
+The config files are in:
+
+	/etc/snort/
+
+The start and stop script is:
+
+	/etc/rc.d/init.d/snortd
+
+
+To read the snort log, which is a binary:
+
+	snort -r snort.log.123456789 | tee snort.txt
+
+The alert file can be read directly, since it is a text file.
+
+Or, you could download one of the many snort log reader from the
+Internet.
+
+Another troubleshooting method:
+
+	snort -c /etc/snort/snort.conf
+
+
+
+Two ways to start snort:
+
+1.  Using /etc/rc.d/init.d/snortd start
+
+2. [StartSnort.sh]
+	#!/bin/sh
+	snort -A full -c /etc/snort/snort.conf  &
+
+The first method, no.1 will log a unified file in
+/var/log/snort/snort.log.1234567
+
+The second method, no.2 will log each attacker under the
+attacker's respective IP directory in /var/log/snort/
+
+
+The contents are the same for both methods, just that in the unified log,
+all attackers are lumped together in one file instead of separate.
+
+We could, however, amend snortd script by changing this line:
+
+snip......................................
+# See how we were called.
+case "$1" in
+  start)
+	echo -n "Starting snort: "
+	snort -A full -c /etc/snort/snort.conf  &
+snip......................................

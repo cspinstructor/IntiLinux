@@ -1,0 +1,197 @@
+BOOT PROBLEMS
+=============
+
+Objective
+---------
+Troubleshooting and solving some boot problems.
+
+
+
+Unable to open initial console
+------------------------------
+
+Problem:
+-------
+
+When booting, you get the message:
+Unable to open an initial console
+Then the system freezes.
+
+
+
+Cause:
+------
+
+This message appears exactly when your system tries to open /dev/tty1
+and it is not there. The possible reasons for this are:
+
+    * Lilo was not installed
+    * Wrong root partition (LILO)
+    * /dev/tty1 got erased
+    * The kernel was compiled without support for virtual termainals.
+    * if /dev/console is missing.
+
+If you cant open /dev/console this is the exact erorr message.
+
+
+
+Solution:
+---------
+
+1. Lilo was not installed
+
+Perhaps you forgot, after recompiling your kernel, to run lilo. To repair this,
+use the installation disks to boot to your installed system, and then run the command:
+
+        /sbin/lilo
+
+2. Wrong root partition (when using LILO):
+
+If you boot with LILO, specify the correct root partition at the LILO prompt.
+In our example this will be /dev/sdb1 :
+
+        LILO: linux root=/dev/sdb1
+
+You should then adapt /etc/lilo.conf (don't forget to call /sbin/lilo afterwards).
+
+
+3. /dev/tty1 got erased :
+
+Start the rescue system. Mount the root partition on /mnt and recreate the device:
+
+        mknod -m600 /mnt/dev/tty1 c 4 1
+
+
+4.  Boot up from a Linux boot/root disk combination. 
+Mount the root filesystem (be it /dev/hda1, /dev/hdb1, etc.) 
+somewhere using the command:
+
+       mount /dev/whatever /mnt -t ext2
+
+Then check /mnt/dev for the following:
+
+console
+tty1
+
+They should look something like (with an ls -l)
+
+crw-------   2 root     root   4, 0 Jan 7 14:58 /dev/console
+crw-------   2 root     root   4, 1 Jan 7 14:58 /dev/tty1
+
+(the permissions [crw, etc.], owner [root], and date/time don't matter. 
+What matters is that they exist, and have those mystical number pairs.)
+
+Do you have those? If not, try using mknod:
+
+mknod /mnt/dev/console c 4 0
+mknod /mnt/dev/tty1 c 4 1
+
+
+
+ 5.   Boot with a bootdisk and when you get to the spot for extra commands
+ type: 
+ 
+ 	mount root=/dev/xxxx where xxxx is the linux partition.
+	
+	
+ It sounds like lilo has the wrong partition listed for linux.
+ Once you're in edit /etc/lilo.conf, fix the problem and re-install lilo.
+
+
+
+Other possible reasons
+----------------------
+
+lilo.conf corrupted
+/dev/console,  /dev/tty0  or  /dev/tty1 corrupted
+
+
+
+Making Boot Disks
+-----------------
+
+To install linux where BIOS does not support CD-ROM
+(eg, in very old PCs):
+
+On another PC, insert Redhat install CD into CD-ROM, then:
+
+	mount /mnt/cdrom
+
+	cd /mnt/cdrom/Redhat/boot
+
+Insert a 1.44 MB floppy then:
+
+	dd if=boot.img of=/dev/fd0
+
+You may need to do the same to copy the drivers to the
+floppy.  
+
+Insert the Redhat CD into the target PC then,
+insert the floppy into the target PC, then go into CMOS to 
+set it to boot from A:. Then follow the instructions. It may
+ask you to insert a second floppy (containing the drivers).
+
+Once your CD driver is loaded, you can continue installing from
+the CD as usual.
+
+
+Last Resort
+-----------
+Reinstall the OS, but before doing so,
+remove the Hard disk and slot into another linux
+box as a secondary master. It will be known as
+
+	/dev/hdc
+
+Note:
+	/dev/hda    	primary master
+	/dev/hdb	primary slave
+	/dev/hdc	secondary master
+	/dev/hdd   	secondary slave
+
+
+Being /dev/hdc, it will probably have something like
+this:
+
+	/dev/hdc1	primary partition
+	/dev/hdc4	extended partition
+
+	/dev/hdc5	logical partitions
+	/dev/hdc6
+	/dev/hdc7
+
+The second linux box's OS will be in /dev/hda.
+Create the following in /mnt:
+
+	mkdir h1 h4 h5 h6 h7
+
+Then mount them:
+
+	mount /dev/hdc1 h1
+	mount /dev/hdc4 h4
+	mount /dev/hdc5 h5
+	mount /dev/hdc6 h6
+	mount /dev/hdc7 h7
+
+cd to each mounted partition and backup to a directory
+in /dev/hda, probably:
+
+	/tmp/Backup
+
+Umount, poweroff and remove the second hard disk, and
+insert it back onto it's original motherboard, then
+reinstall the OS.
+
+Using diskdruid, when it comes to selecting the partitions
+to format, avoid those partitions containing data. Just install
+the boot and system partitions.
+
+The, reboot,  your original data is still intact.
+
+
+
+
+
+Other Resource
+--------------
+http://www.tldp.org/HOWTO/LILO-crash-rescue-HOWTO/crash.html

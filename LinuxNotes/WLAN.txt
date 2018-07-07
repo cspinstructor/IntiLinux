@@ -1,0 +1,565 @@
+Wireless Local Area Network ("WLAN")
+====================================
+
+Objective
+---------
+Experiments with wlan:
+
+[1] Compiling and Installing pcmcia driver on Redhat 7.2
+
+    and using CNET's CNWLC-811 PCMCIA 
+    Wireless Card and CNET's CNAP-711 Wireless Access Point.
+
+[2] Peer-to-peer communication using Ad Hoc Mode 
+    [Wifi card to Wifi card]
+
+[3] CNAP-711 Access Point as bridge
+
+
+[4] Compiling and installing pcmcia driver and using atmelwlandriver on
+    RedHat 9
+
+
+CNWLC-811 Wireless PCMCIA card
+-------------------------------
+Costs $145 
+CD comes with Linux driver and installation programs.
+but can compile only on Redhat 7.2. Fails miserably on
+Redhat 8 and 9. Download atmelwlandriver and compile
+for Redhat 9.
+
+
+CNAP-711 Wireless Access Point/Bridge
+-------------------------------------
+Costs $220 [ > $330 if bought separately] also
+has wireless bridge functionality.
+
+Management is via MS windows SNMP client program.
+No web interface.
+
+
+
+Installing xforms
+-----------------
+xforms library is needed by xvnet.
+
+To manage the card, you need to install xvnet, which is 
+automatically installed when you pcmcia below, but a library
+is missing:
+
+	libforms.so.0.89
+
+download xforms-1.0-2.i386.rpm from the Internet and then:
+
+	rpm -Uvh xforms-1.0-2.i386.rpm
+
+Then, 
+	cd /lib
+
+and create symlink:
+
+	ln -s /usr/X11R6/lib/libforms.so.1.0 libforms.so.0.89
+
+This is because xforms installation put the libforms library in
+/usr/X11R6/lib, but xvnet looks for libforms.so.0.89 in /lib
+
+
+
+Installing the PCMCIA driver and xvnet
+--------------------------------------
+Doesn't work with RedHat 8.
+Install RedHat 7.2 as Laptop, opt for Gnome Windows Manager.
+Install kernel-sources-2.4.7-10.i386 from CD2.
+
+Goto the kernel sources directory,
+
+   cd /usr/src/linux-2.4
+   make menuconfig
+   
+But exit it and save the system config.
+
+   make dep
+
+cp the CNWLC-811 tarball to /usr/local/cnet
+
+    cp NWLC-811-CNET-AR-PCM-LRP-V1.00.tgz /usr/local/cnet
+
+    cd /usr/local/cnet
+
+    tar zxvf  NWLC-811-CNET-AR-PCM-LRP-V1.00.tgz 
+
+cd setup
+
+then,
+
+	make pcmcia
+
+It will read the menuconfig that you did earlier, to determine
+the system config order to compile the pcmcia driver.
+
+Restart pcmcia:
+
+	/etc/init.d/pcmcia restart
+
+eject and reinsert the card.
+
+
+Then, check:
+
+	cardctl ident
+
+If you can see the card info, then it is successfull,
+Then, 
+
+	ifconfig eth0 192.168.0.2 up
+	route add default gw 192.168.0.1
+
+
+Start the xvnet in X-windows to see card configuration
+details.
+
+
+
+Configuring CNAP-711 Wireless Access Point
+------------------------------------------
+Do not use default settings, change as follows:
+
+SSID: daemon
+IP: 192.168.0.117
+Default Gateway: 192.168.0.1 [this is the Linux Firewall/Router, see Fig A]
+Change Password: h4ck3rz
+
+Enable Encryption:
+
+WEP: 64 bits [128 bits may cause performance degradation]
+Manual entry, Key1: 1234567890
+Default Key ID: 1
+
+Advanced Settings:
+
+MAC Address Filter, Filtering Enabled
+Key in the MAC addresses, eg: 0009B2345678 [without dashes]
+then click  <<<<-ADD
+
+Then, click Save.
+
+
+
+Then, for the Linux Atmel Utility,
+
+Set the ESSID: daemon
+Transmit Rate: Auto [instead of fixed at 11Mbps]
+Then, enable Encryption: 64 bits and enter Key #1,
+this should be the same as the Key #1 entered in
+the Access Point:
+
+	1234567890
+
+WEP Key to use: One
+WEP Mode: Mandatory
+Authentication Type: Shared Key
+
+Click Submit.
+
+
+Do the same for WinME.
+
+
+
+
+
+Miscellaneous Commands
+----------------------
+[iwconfig is not installed.]
+
+iwconfig, see man iwconfig
+used for setting wireless parameters only.
+
+usage:
+
+	iwconfig wlan0
+
+note: not eth0
+
+Use this to set IP:
+
+	ifconfig wlan0 
+
+
+To eject PCMCIA card:
+
+	cardctl eject
+
+then remove the card.
+Two beeps means OK.
+
+
+To insert:
+
+Just insert it and it will autodetect.
+Two beeps mean OK.
+
+
+To start or stop PCMCIA Daemon:
+
+/etc/init.d/pcmcia  {start|stop|status}
+
+
+
+Home Wireless Network
+--------------------
+
+The architecture is as shown in Fig A below:
+
+	      Layer-2       Linux
+Internet <---> ADSL <---> Firewall/Router 
+	      Bridge	     ^
+			     |
+			     |
+		             V
+	        LAN <---- > Hub
+			     ^
+			     |	
+			     |
+			     V
+  Wireless USB		   Layer-2	    Wireless
+   +  WinME <----------->  Wireless  <---->  PCMCIA + Notebook
+   Desktop		  Access Point		    
+
+
+
+	Fig.A  Hybrid Wifi + Ethernet LAN
+	---------------------------------
+
+
+Security of Wireless Access Point is via inbuilt MAC-filter
+and WEP encryption.  I tried to sniff the network using Ethereal,
+but I only could capture those packets going to or coming from
+eth0 of the Notebook. I could not capture packets going to or coming from
+the LAN.  
+
+
+[Firewall]
+If you are using MAC-filtering , don't forget to add the wireless cards' 
+MAC addresses to the firewall rulesets. See chapter Firewall.txt.	
+
+
+
+
+
+Ad Hoc Mode [Wifi card to Wifi card]
+------------------------------------
+The above settings are all infrastructure mode.
+
+You can enable PCMCIA wifi to talk directly to the Wireless USB, without
+going through an Access point. See Fig B below.
+
+Linux					WinME
+Notebook            wireless           Desktop PC
++ CNLWC-811  <------------------------> + CNLUSB-611
+
+
+	Fig. B  Peer-to-peer communication in ad hoc mode
+	-------------------------------------------------
+
+
+Set as follows:
+
+[Linux Notebook]
+Use the ATMEL Wireless LAN Monitor Utility to set
+Operating Mode: Ad-Hoc
+
+Start web server: /etc/init.d/httpd start
+Start ssh server: /etc/init.d/sshd start
+Start ftp server: chkconfig wu-ftpd on
+
+
+
+[WinME]
+Use CNet WLAN Monitor Utility to set
+Operating Mode: Ad-Hoc
+
+
+ping each other, use WinME to access the servers on Linux
+Notebook.
+
+
+
+
+
+
+Bridge Mode
+----------
+I tried  CNet's CNAP-711  bridge function with the
+following architecture as in Fig C.
+
+CNAP-711			      Linux
+in Bridge <----------------------->  Notebook
+Mode				     + CNLWC-811	
+				    in Ad Hoc Mode	
+
+	Fig. C.  Bridge to PCMCIA card in Ad Hoc Mode
+	---------------------------------------------
+
+I didn't have two CNAP-711 AP's , so i used one CNAP-711
+as bridge and another PCMCIA card in Ad Hoc mode.
+
+
+The CNAP-711 is set into Bridge Mode as follows:
+
+	Brige Setting: Wireless Bridge
+	Point to Point Remote MAC Address, input the
+	Linux PCMCIA's MAC address.
+
+Set the Linux PCMCIA card to Ad Hoc mode.  It didn't work.
+I tried Infrastructure Mode - also didn't work. I guess you
+need another CNAP-711 bridge to make it work.
+
+
+
+Compiling and installing atmelwlandriver for RedHat 9
+------------------------------------------------------
+
+Download 
+
+  atmelwlandriver.2.1.2.2.tar.gz 
+
+from:
+
+  http://atmelwlandriver.sourceforge.net/news.html
+	
+and put in:
+
+   /usr/local/atmel
+
+tar zxvf  atmelwlandriver.2.1.2.2.tar.gz 
+
+Must install xfroms.
+Then, do this:
+
+cd /lib
+
+then, create symlinks in /lib to the xforms libraries, this
+is necessary because xforms installs in /usr/X11R6/lib
+instead of in the more usual /lib directory.
+Do the symlinks as follows:
+
+     ln -s  /usr/X11R6/lib/libforms.so.1            libforms.so.0.89
+     ln -s  /usr/X11R6/lib/libforms/libforms.so.1   libforms.so.1
+     ln -s  /usr/X11R6/lib/libforms/libforms.so.1.0 libforms.so.1.0
+
+
+Goto the kernel sources directory,
+
+   cd /usr/src/linux-2.4
+   make menuconfig
+   
+But exit it and save the system config.
+
+   make dep
+
+
+Then create symlink in /lib/modules/2.4.20-8 called pcmcia
+which points to:
+
+	/lib/modules/2.4.20-8/kernel/drivers/pcmcia
+
+as follows:
+
+	cd /lib/modules/2.4.20-8
+
+	ln -s  /lib/modules/2.4.20-8/kernel/drivers/pcmcia pcmcia
+
+Then check the softlink:
+
+	ls -l
+
+and you should see this line:
+
+	
+ /lib/modules/2.4.20-8/pcmcia -> /lib/modules/2.4.20-8/kernel/drivers/pcmcia/
+
+
+The softlink is necessary, or, else, when you do:
+
+ 	make install
+
+later, you will get this error:
+
+	install: /lib/modules/2.4.20-8/pcmcia is not a directory
+
+
+Then, cd /usr/local/atmel/atmelwlandriver   and do this:
+
+	make realclean
+	make config
+
+and answer the questions:
+
+	Build all: N
+	Set extra module version info: N
+	Build Debug version: N
+	Build USB Drivers: N
+	Build PCMCIA Drivers:y
+	Build PCMCIA rfmd Driver:y
+	Build PCMCIA 3COM Driver: N
+	Build PCMCIA rfmd revision d Driver: N
+	Build PCMCIA rfmd revision e Driver: y
+	Build PCMCIA 504 driver: N
+	Build miniPCI Driver: N
+	Build applications: y
+	Build command line application: y
+	Build Winter wxWindows application:N
+
+Note that we are building the pcmf502re.o, ie, the revision E
+version, which is used in CNET's CNWLC 811 PCMCIA card.
+
+Then,
+
+	make all
+
+Then,
+
+	make install
+
+
+Then, you need to hack the script:  
+
+	/etc/rc.d/init.d/pcmcia
+
+by removing the .o from the driver names
+or else whenerver you restart the pcmcia server:
+
+	/etc/rc.d/init.d/pcmcia restart
+
+or, whenever you reboot, modulesmodeprobe will complain cannot
+find the modules yenta_socket, pcmcia_core, ds
+etc...
+
+
+The relevant parts of your script should now look like this:
+
+snip------------------------------------------------------------------
+	if [ $? -ne 0 ] ; then
+	    if [ -d /lib/modules/preferred ] ; then
+		PC=/lib/modules/preferred/pcmcia
+	    else
+		PC=/lib/modules/`uname -r`/pcmcia
+	    fi
+	    KD=/lib/modules/`uname -r`/kernel/drivers/pcmcia
+	    if [ -d $PC ] ; then
+		echo -n " modules"
+
+		# PAUL: Comment out these:
+		#/sbin/modprobe pcmcia_core.o $CORE_OPTS
+		#/sbin/modprobe $PCIC.o $PCIC_OPTS
+		#/sbin/modprobe ds.o
+
+		# PAUL: Add these:
+	    	/sbin/modprobe pcmcia_core $CORE_OPTS
+		/sbin/modprobe $PCIC $PCIC_OPTS
+		/sbin/modprobe ds
+
+
+#snip--------------------------------------------------------
+
+
+Note the commented parts: #PAUL: ....
+
+
+Then,
+
+	edit atmel.conf in /etc/pcmcia
+
+and append this:
+
+#Paul added
+
+card "CNet CNWLC 11Mbps Wireless PC Card V-5"
+  manfid 0x1371, 0x0811
+   bind "pcmf502re"
+
+
+to the bottom, it means pcmf502 revision E
+
+I got the Name and manfid (Manufacturer ID) by doing this:
+
+	tail -f /var/log/messages
+
+while inserting the card.
+
+
+Edit /etc/pcmcia/config
+
+and also add the same lines.
+
+
+
+Then, reboot. 
+The card will be detected and the proper modules will be loaded:
+
+
+Check with lsmod:
+
+
+Module                  Size  Used by    Not tainted
+pcmf502re              73440   0 
+ds                      8680   1  [pcmf502re]
+yenta_socket           13472   1 
+pcmcia_core            57216   0  [pcmf502re ds yenta_socket]
+
+
+
+For some unknown reason, xvnet is not compiled, but lvnet is.
+
+Download wireless.zip from:
+
+	http://www.cnet.com.tw
+
+	unzip wireless.zip
+
+and within it you'll get:
+
+	CNWLC-811-OEM-AR-PCM-LRP-V.TGZ
+
+	tar zxvf CNWLC-811-OEM-AR-PCM-LRP-V.TGZ
+
+You'll get another directory called:
+
+	setup
+
+	cd setup/misc
+
+and copy the precompiled binary xvnet into /bin
+
+	cp xvnet /bin
+
+
+You can now managed the card either using xvnet or lvnet
+(or iwconfig or the gnome's internet configuration wizard.
+
+You can put the card into ad-hoc mode or infrastructure mode.
+
+Many Access Points are configured to serve DHCP, so install
+the dhcp client called:
+
+	dhclient.xxx.rpm
+
+
+Then,
+
+	ifconfig eth0 0.0.0.0
+
+Then,
+
+	dhclient eth0 
+
+It will listen on udp:
+
+	netstat -uan
+	
+on port 67 as bootps
+
+	Insert your card, reboot if there is an AP nearby, 
+an IP address will be automatically assigned
+

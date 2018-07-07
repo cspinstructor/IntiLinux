@@ -1,0 +1,376 @@
+BACKUP
+======
+
+Objective
+---------
+How to do Backups.
+
+
+
+Using USB pen drive
+--------------------
+The USB pen drive is a small memory card the size of a pen which plugs 
+directly into the USB port. It can typically hold 128 MB of data.
+
+
+Make  a SCSI entry in /etc/fstab as follows:
+
+
+LABEL=/                 /                       ext2    defaults        1 1
+LABEL=/boot             /boot                   ext2    defaults        1 2
+none                    /dev/pts                devpts  gid=5,mode=620  0 0
+none                    /proc                   proc    defaults        0 0
+none                    /dev/shm                tmpfs   defaults        0 0
+/dev/hda2               swap                    swap    defaults        0 0
+/dev/cdrom              /mnt/cdrom              iso9660 noauto,owner,kudzu,ro 0 0
+/dev/fd0                /mnt/floppy             auto    noauto,owner,kudzu 0 0
+/dev/sda1		/mnt/usbdevfs		vfat	noauto,owner,rwx 0 0
+
+
+
+Note carefully:
+
+/dev/sda1		/mnt/usbdevfs		vfat	noauto,owner,rwx 0 0
+
+
+If you did this, then all your bash scripts can't execute:
+
+/dev/sda1		/mnt/usbdevfs		vfat	noauto,user,rw	0 0
+
+You'll get error:
+
+	/bin/sh interpreter bad
+
+
+Then chown sda1:
+
+	chown v.disk /dev/sda1
+
+where v is the username, or else, you'll get error:
+
+	Only root can mount /dev/sda1 on /mnt/usbdevfs
+
+Also, 
+
+	chmod 4777 /dev/sda1
+
+
+
+
+
+However when we cd /mnt/usb and try to chmod 755 file, we get an error,
+cannot set 755.
+
+Smith (2001) at p 621 suggests an alternative.  Edit /etc/fstab as follows:
+
+
+/dev/sda1		/mnt/usb		vfat	noauto,owner,umask=0022 0 0
+
+The umask=0022 correctly mounts  /mnt/usb as 755 and avoids the error message
+above.
+
+
+Note:
+
+You can also mount the thumbdrive without making an entry in the 
+/etc/fstab file:
+
+	mount /dev/sda1  /mnt/usb
+
+
+
+
+
+The SCSI device is the last entry above.  In this case it is the USB removable
+pen drive. Although not actually a SCSI device, the OS regarded it as a SCSI
+device.  Once you have plugged in the USB pen drive, do this:
+
+
+	mount /mnt/usbdevfs
+
+Note that is is mounted as a vfat filesystem, so that the pen drive could also
+be plugged into Microsoft machines and read.  If you set the file system as ext2, 
+Microsoft machines would not be able to read the files.
+
+
+You could then cp files to /mnt/usbdevfs
+It is regarded as a file system.
+
+
+
+Using floppy to backup
+----------------------
+This is only a proof of concept.  You could mount floppies directly:
+
+	mount /mnt/floppy
+
+Then copy files to it. It is treated as a file system.
+
+Alternatively, you could backup directly to /dev/fd0 :
+
+	tar cvlpf /dev/fd0 /home/vigo/Programs
+
+
+in which case it is treated as a device.
+
+where c = create, v = verbose, l = one file (ie, local filesystem only),
+p = preserve permission bits, f = use the file/directory specified
+
+To extract:
+
+	cd /
+	tar xvlpf /dev/fd0
+
+
+It is important to goto / first, because every backup is relative to / .
+Note that x = extract.
+
+
+Using SCSI tape drive
+----------------------
+Plug in the SCSI card, connect the tape drive with a tape inside and
+reboot.  Kudzu should auto-detect and install the driver.
+
+With HP SureStore DAT8, tape drive, just plug the Tape drive into
+the SCSI card using a SCSI cable. The system will detect the
+tape drive via the PCI SCSI card.
+
+
+Else, you might need to look at:
+
+	/lib/modules/2.4.7-10/kernel/drivers/scsi
+	/lib/modules/2.4.7-10/kernel/drivers/char
+
+
+or, use the drivers that is supplied by the vendor.
+
+See the chapter Networking.txt on how to install drivers.
+The commands are:
+
+	insmod drivername.o
+
+To check whether installation was successful,
+
+	lsmod
+
+The above "lsmod" command will list all the modules (drivers) that 
+are loaded. 
+
+Incidentally, to remove the module,
+
+	rmmod drivername.o 
+
+
+Another way, probably better way, is to use:
+
+	modprobe 
+
+that way all additional dependencies will be resolved cleanly.
+To remove,
+
+	modprobe -r drivername
+
+
+
+To make sure that the right module (driver) is used when
+the NIC starts, edit the file /etc/modules.conf, an example
+is shown below:
+
+
+
+	alias parport_lowlevel parport_pc 
+	alias eth0 3c509 
+	alias eth1 ne2k-pci 
+	alias sound-slot-0 sb 
+	alias usb-controller usb-ohci 
+
+
+If you find that the default driver installed by kudzu does not 
+work, you need to manually remove the default driver and install 
+the one supplied by the vendor.
+
+
+To backup:
+
+	tar cvlpf /dev/st0 /home/vigo/Programs
+
+
+To extract:
+
+	cd /
+	tar xvlpf /dev/st0
+
+
+
+If you are using a no-auto rewind tape drive, then substitute
+/dev/st0 with /dev/nst0.
+
+
+
+
+Some useful commands
+--------------------
+The commands below are used with tape drives:
+
+	mt -f /dev/nst0 rewind
+	mt -f /dev/nst0 fsf 1  [ skip 1 file ]
+	mt -f /dev/nst0 compression 1 [ compression on ]
+	mt -f /dev/nst0 offline
+
+
+
+How to do reuse tape without overwriting
+----------------------------------------
+With HP SureStore DAT8, insert tape, it will autoload.
+Then do:
+
+	mt -f /dev/nst0 rewind
+
+Do not use st0 - this will auto rewind and any fsf or rewind
+command is ignored.
+
+Then, backup the target directory:
+
+	tar cvlpf /dev/nst0 /home/admin /usr/shared/myprograms ......
+
+Just list all the directories at the back.
+
+
+
+Crontab
+------
+You can use crontab to automatically backup at 3 am everyday, an example
+crontab is:
+
+.............................................................
+#This is the crontab for BackupScripts for Monday to Sunday
+#To set crontab, do
+
+#	crontab -e 
+
+#Then, read in this file:
+
+#	:r Crontab.txt	
+
+
+0 3 * * 1 /root/BackupScripts/Mon.sh
+0 3 * * 2 /root/BackupScripts/Tues.sh
+0 3 * * 3 /root/BackupScripts/Wed.sh
+0 3 * * 4 /root/BackupScripts/Thurs.sh
+0 3 * * 5 /root/BackupScripts/Fri.sh
+0 3 * * 6 /root/BackupScripts/Sat.sh
+0 3 * * 7 /root/BackupScripts/Sun.sh
+
+..................................................
+
+
+
+The Monday to Sunday Backup scripts are described next.
+
+
+Backup Scripts
+--------------
+
+We need 7 scripts so that we can forward the tape each time we start backup.
+Without forwarding the tape, the previous day's backup would be overwritten.
+The scripts are shown below:
+
+[Monday's script]
+..............................
+#!/bin/sh
+# Monday's Backup Script
+
+/bin/mt -f /dev/nst0 rewind
+
+#substitute /home/dbadmin with target directory to backup
+#just list any additional directories after /home/dbadmin
+#separated by a space
+/bin/tar cvlpf /dev/nst0 /home/dbadmin
+	
+.......................................
+
+
+Note that the Monday's script above, we just need to rewind to the start
+of the tape. No need to forward.
+
+
+[Tuesday's script]
+..................................
+
+#!/bin/sh
+#Tuesday's Backup's script
+
+
+/bin/mt -f /dev/nst0 rewind
+/bin/mt -f /dev/nst0 fsf 1
+
+#substitute /home/dbadmin with target directory to backup
+#just list any additional directories after /home/dbadmin
+#separated by a space
+/bin/tar cvlpf /dev/nst0 /home/dbadmin
+........................................
+
+
+Notice that in the Tuesday's script above, you need to forward past
+the first file. The first file is the backup for Monday. The forward
+is done with this line:
+
+
+	/bin/mt -f /dev/nst0 fsf 1
+
+
+For For Wednesday's script, substitute 1 with 2, and so on.
+For Wednesday, 2, for Thursday, 3, for Friday, 4, for Saturday, 5
+and for Sunday, 6.
+
+
+All together there are 7 scripts, ie, Mon.sh, Tues.sh, Wed.sh, Thurs.sh,
+Fri.sh, Sat.sh and Sun.sh. Put them all in /etc/root/BackupScripts.
+
+
+Don't forget to chmod 755 all the scripts!
+
+
+
+Incremental Backups
+-------------------
+We're going to do as follows:
+
+full backup  - Monday
+incremental backups - Tues, Wed, Thurs, Fri, Sat and Sun
+
+The solution:
+
+[Monday]
+
+/bin/mt -f /dev/nst0 rewind
+tar cvlpf /dev/nst0 --listed-incremental /root/inc /home/dbadmin
+
+The file /root/inc lists the backups so far.
+
+
+[Tues]
+/bin/mt -f /dev/nst0 rewind
+/bin/mt -f /dev/nst0 fsf1
+tar cvlpf /dev/nst0 --listed-incremental /root/inc /home/dbadmin
+
+
+[Wed]
+/bin/mt -f /dev/nst0 rewind
+/bin/mt -f /dev/nst0 fsf2
+tar cvlpf /dev/nst0 --listed-incremental /root/inc /home/dbadmin
+
+
+and so on...
+
+
+If you wanted to restart, just delete the /root/inc file.
+
+
+
+
+
+
+
+
+

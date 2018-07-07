@@ -1,0 +1,72 @@
+Linux Router
+============
+
+Objective
+---------
+To interconnect two differnent networks together using a linux router.
+For simplicity we will assume that the two networks are 192.168.0.0 and
+192.168.1.0. We will assume that there is only one PC on the network
+192.168.0.0 with IP address 192.168.0.2 and there is also one PC on
+network 192.168.1.0 with IP address 192.168.1.2.  The topology is as 
+below in Fig A:
+
+192.168.0.2 <---> 192.168.0.1
+    PCA		Router             PCB
+	         192.168.1.1 <---> 192.168.1.2
+
+	  Fig A. Interconnecting two networks using a router
+
+If you wanted to connect more than one PC in network 192.168.0.0, then 
+substitute PCA with a hub or switch.  The same goes for network 
+192.168.1.0.
+
+
+Basic Routing Concepts
+----------------------
+Assuming that the netmask for each network is 255.255.255.0, the 
+nework address is identified from the first three octets, ie, 
+192.168.0.x.  The IETF has reserved 192.168.0.0 to 192.168.255.254
+for intranet addresses. Therefore, with netmask 255.255.255.0, the 
+third octet is used to identify the network. The last octet identifies
+the host. 
+
+Therefore, 192.168.0.x is a different network from 192.168.1.x.  
+If you wanted to link two different networks together you should use 
+a router. A router is a computer with at least two NICs, eg, 
+in Fig A. Notice that the router has two NICs.
+
+Refer to the Networking chapter on how to install NICs. The first 
+interface is "eth0" and has IP address 192.168.0.1 whilst the second 
+NIC is called "eth1" and is assigned IP address 192.168.1.1.  
+
+
+
+Configuring PCA and PCB
+-----------------------
+The default gateway for PCA should be set to that of the router.
+To set default gateway for PCA, 
+
+route add default gw 192.168.0.1
+
+The default gateway for PCB should also be set to that of the firewall. 
+To set default gateway for PCB,
+
+route add default gw 192.168.1.1
+
+Remember, that the router has two interfaces, the interface with IP
+address 192.168.0.1 belongs to PCA's network where all the hosts has
+IP addresses of this form: 
+
+	192.168.0.x
+
+whilst the router's interface with IP address 192.168.0.2 belongs to 
+PCB's network where all hosts has IP address of the form: 
+
+	192.168.1.x
+
+In other words, a router has got two feet, with one foot in one 
+network and the other foot in the other network. If a host on network
+192.168.0.0 sends a packet with destination IP 192.168.1.x where x
+is any number from 1 to 254, the router will receive the packet
+on it's NIC with IP address 192.168.0.1 and forward it to network
+192.168.1.0 via it's other NIC which has the IP address 192.168.1.1.

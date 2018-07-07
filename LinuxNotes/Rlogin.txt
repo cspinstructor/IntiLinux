@@ -1,0 +1,87 @@
+RLOGIN
+------
+
+Objective
+---------
+Setting up rlogin server and connecting to an rlogin
+server.
+
+
+Server
+------
+Start server:
+
+	chkconfig rlogin on
+
+It listens on port 513.
+
+
+Client
+------
+To connect to rlogin server, assuming it is
+192.168.0.1:
+
+	rlogin -l bill 192.168.0.1
+
+It prompts for login name and password just like telnet.	
+
+
+Rlogin without passwords
+------------------------
+The rlogin, rsh and rcp commands have been disabled by default.
+All require authentication via pam. The pam settings are in:
+
+	/etc/pam.d
+
+directory.
+
+To enable rlogin without password, edit:
+
+	/etc/pam.d/rlogin 
+
+and set all as sufficient:
+
+	
+#%PAM-1.0
+# For root login to succeed here with pam_securetty, "rlogin" must be
+# listed in /etc/securetty.
+auth       sufficient	/lib/security/pam_nologin.so
+auth       sufficient	/lib/security/pam_securetty.so
+auth       sufficient   /lib/security/pam_env.so
+auth       sufficient	/lib/security/pam_rhosts_auth.so
+auth       sufficient	/lib/security/pam_stack.so service=system-auth
+account    sufficient	/lib/security/pam_stack.so service=system-auth
+password   sufficient	/lib/security/pam_stack.so service=system-auth
+session    sufficient	/lib/security/pam_stack.so service=system-auth
+
+
+Make sure you save the original rlogin before making changes.
+
+Then, start the rlogin server:
+
+	chkconfig rlogin on
+
+
+You can now login from client, without password:
+
+	rlogin -l bill 192.168.0.1
+
+No need to create .rhosts. Also no need to add the -h flag to 
+/etc/xinet.d/rlogin startup script.  Because Linux uses pam 
+authentication, .rhosts doesn't work. Tail /var/log/messages will tell
+you that -h etc options has been relegated to pam_rhosts_auth in
+/etc/pam.conf.  Although it says /etc/pam.conf, the man pam.d manual will tell
+you that there is an option of using /etc/pam.conf or /etc/pam.d/.
+RedHat 8 uses /etc/pam.d/
+
+
+The same applies for rcp and rsh, edit the /etc/pam.d/rsh
+and start the rsh service:
+
+	chkconfig rsh on
+
+Then, 	
+	rsh -l bill 192.168.0.1 ls
+
+
+ 

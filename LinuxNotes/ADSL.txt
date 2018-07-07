@@ -1,0 +1,866 @@
+ADSL
+====
+
+Objective
+---------
+To setup ADSL static & dynamic IP connection for TmNet Streamyx.
+The ADSL static connection uses an ADSL Router, whilst the Dynamic one uses an ADSL Bridge (also known as PPPoE - PPP on Ethernet).  ADSL Bridge allows Linux to be the router and firewall. More flexibility.  
+
+What is ADSL?
+-------------
+ADSL stands for Asynchronous Digital Subscriber Line.
+Download speed is 384 kbps and upload speed is 128 kbps,
+but for Corporate ADSL, it may be much faster. It uses
+the ordinary telephone copper line to carry computer digital
+data and also voice data. 
+
+
+Setting Up an ADSL static IP connection
+----------------------------------------
+Static IP ADSL is usually subscribed by corporations.
+The modem supplied is Tmnet is Lucent ADSL Router. A UTP cable
+connects the ADSL Router to the NIC of the Firewall/Computer.
+You need to set the Firewall/Computer to the IP address
+assigned by your ISP. Fig A below shows the physical
+components.  
+
+
+
+Firewall <------> ADSL Router  <---> Splitter <--> Telephone  
+  |        UTP 	                       |            Line
+  |	    Cable    		           V 
+  |				             Telephone                 
+Switch
+  |
+  |
+ LAN				      	       
+
+       	Fig A. Connecting an ADSL Router
+
+
+Fig B. below shows an example with specifics. Assuming
+that TmNet assigns 200.200.200.2 for your ADSL modem and
+200.200.200.1 for your LAN Gateway or Firewall. Assuming
+the Firewall is installed with 2 NIC's, ie, 3Com and Accton.
+
+
+LAN                     FIREWALL                INTERNET
+                                          
+                eth0         eth1                       
+                3C509        ne2k-pci
+                (3com)       (Accton)
+192.168.0.3     192.168.0.1  200.200.200.2      200.200.200.1
+192.168.0.4
+
+	Fig B.  An ADSL plus Firewall Setup
+
+
+In the above, you should set the default gateway for each host
+in the LAN to 192.168.0.1. And set the default gateway for
+200.200.200.2 to the 200.200.200.1 
+
+If, on the other hand, you are not sharing the line, then
+there is no need for a Firewall. In such a case, just
+connect the ADSL directly to the PC, and set the PC's IP
+to 200.200.200.2 with default gateway to 200.200.200.1 as in
+Fig. C below:
+
+	PC
+     (Accton)                    ADSL Modem
+    200.200.200.2  <----------> 200.200.200.1
+                    UTP cable
+
+    Fig C.  An ADSL connection with no Firewall
+
+
+
+
+Note that the router itself usually has a public web interface on port 80. You could use another PC, connect to http://192.168.1.1 and configure the router.
+
+
+Setting Up an ADSL dynamic IP connection
+----------------------------------------
+Home dynamic IP ADSL can be router or bridge based. Initially, for
+for Home Dynamic IP ADSL, TmNet Streamyx package provides  Aztech
+Turbo 900 series bridge modem. Today, it is common to find home users using router ADSL modem as well. If you are using a router ADSL, then connect to the web interface to set the public IP as 0.0.0.0 so that it can autodetect the dynamic IP that is assigned by Streamyx. Also set the DNS servers 202.188.0.133 and 202.188.1.5.
+
+The instructions below assumes you are using an ADSL bridge modem. The connection to the PC is the same as
+Fig D, below. 
+
+
+
+Firewall <------> ADSL Bridge  <--> Telephone  
+  |        UTP 	       |            Line
+  |	    Cable          |
+  |		          Filter                 
+Switch                   |
+  |		         	 V	
+  |                  Telephone  
+ LAN				      	       
+
+       	Fig D. Connecting an ADSL Bridge 
+          (with Voice filter for Telephone)
+
+
+Note that in dynamic IP, you do not set the IP address
+of the NIC of the Firewall/Computer. The architecture is as shown
+in Fig D below.
+
+
+
+LAN                     FIREWALL                INTERNET
+                                          
+                eth0         eth1                       
+                3C509        ne2k-pci
+                (3com)       (Accton)
+192.168.0.3     192.168.0.1   No IP        IP Dynamically Assigned
+192.168.0.4
+
+	Fig E.  A ADSL - Firewall Setup for Dynamic IP 
+
+TmNet will provide the Splitter (or Filter),
+ADSL Modem and WinPOET software (which runs only on 
+Win98/ME/XP/2000). Linux uses rp-pppoe, which will be 
+explained later. PPPOE stands for "PPP on Ethernet".
+
+To check if it is already installed:
+
+	whereis adsl-connect
+	rpm -qf adsl-connect
+
+or
+	rpm -qa rp-pppoe*
+
+If it is not installed, download from www.roaringpenguin.com.
+Latest as of time of writing is:
+	
+	rp-pppoe-3.5-1.i386.rpm
+
+Also get the optional gui frontend: 
+
+	rp-pppoe-gui-3.5-1.i386.rpm
+
+Login as root and install using the rpm command:
+
+	
+	rpm -U rp-pppoe-3.5-1.i386.rpm
+	rpm -U rp-pppoe-gui-3.5-1.i386.rpm
+
+Note the -U is to update from earlier versions of rp-pppoe.
+You could use -i also, which means install.
+If you wanted to see more interactive details while the packages is
+being installed:
+
+	rpm -Uvh ...
+	
+	where,
+		v is for uniform number of hash marks, and,
+		h is for hash marks
+
+Then run the adsl-setup script. This script will ask you a series
+of questions and save the information given by the user into a
+configuration file called:
+
+	/etc/ppp/pppoe.conf
+
+Usual particulars include:
+
+	#Ethernet card connected to ADSL modem
+	ETH='eth0'
+	
+	#ADSL user name
+	USER='xyz@tmnet'
+
+	#Bring up on demand? If you set yes, it will disconnect
+	#on idle. Doesn't work well with dynamic IP. You should
+	#set no for all ADSL whether Static or Dynamic, so that
+	#it will forever attempt to reconnect whenever the  
+	#connection is lost and it will never drop the line even if 
+	#it is idle
+	DEMAND=no
+		
+	#DNS type: SERVER=obtain from server
+	DNSTYPE=SERVER
+
+	#Obtain DNS server addresses from peer
+	PEERDNS=yes
+	DNS1=     [ blank ]
+	DNS2=	  [ blank ]
+
+	#Make PPPoE connection the default route
+	DEFAULTROUTE=yes
+
+	#Connect Timeout set to 0 so that it will forever try to
+	#to reconnect after adsl-start is called
+	CONNECT_TIMEOUT=0
+
+	ACNAME=      [ blank ]
+	SERVICENAME= [ blank ]
+
+	#Use synchronous PPP? I used no, but yes should
+	#be less strain on CPU and should also work
+	SYNCHRONOUS=no	
+
+	#Clam MSS should set to 1412 if Firewall is gateway for LAN
+	CLAMPMSS=1412
+
+	#LCP echo inerval and failure count
+	LCP_INTERVAL=20
+	LCP_FAILURE=3
+
+	PPPOE_TIMEOUT=80
+		
+	#Firewalling: Set none if you have your own
+	FIREWALL=NONE
+
+	LINUX_PLUGIN=  [ blank ]
+
+	#Any extra argument to pass to pppoe
+	PPPOE_EXTRA=""
+
+	#Any extra arguments to pass to pppd
+	PPPD_EXTRA=""
+
+
+Note that the password is stored in:
+
+	/etc/ppp/pap-secrets
+	/etc/ppp/chap-secrets
+
+and not in the pppoe.conf file.
+
+
+Then, to connect, enter the command:
+
+	adsl-connect
+or
+  	 /usr/sbin/adsl-connect /etc/ppp/pppoe.conf
+
+To get the status:
+
+	adsl-status
+
+To stop the connection:
+
+	adsl-stop
+
+It is also known as dial-up connection. But there is no number
+to dial up, just a script to connect to and login to the ISP's server.
+Each time the connection is made, a different IP address is assigned.
+
+
+
+Autostart on reboot
+------------------
+Edit /etc/rc.d/rc.local with these:
+
+adsl-start &
+/etc/init.d/firewall-2.4.drop start
+route add default dev ppp0
+
+
+Notice the "&" in the rc.local script.  This makes the Start.sh
+script run as a background process. Failure to do this will
+cause linux to stop booting when it executes the Start.sh script,
+because it will "block" when it executes the script, which in turn,
+prevents linux from completing the bootup process.
+
+
+
+Auto Reconnect
+--------------
+For both the static IP and also the dynamic IP setups, once
+you do adsl-connect, the system will attempt to reconnect should
+the line gets disconnected. The connect-timeout default is 30 seconds.
+This means after 30 seconds, it will give up trying to reconnect. If
+you want it to forever try to reconnect, then edit the pppoe.conf,
+or, the conf.name file, by setting:
+
+	CONNECT_TIMEOUT=0
+
+
+
+Finding out the Dynamic IP address
+==================================
+For the dynamic IP setup, the IP address keeps changing each time
+it reconnects after a line-drop.  How can a system administrator
+ssh to the firewall to do system administration? A simple solution
+is to crontab the Firewall to send its IP address to a remote
+box every minute.  The Firewall should have a script to check
+the IP address.  The remote box should have a script to listen for
+the connection from the Firewall. The architecture is as shown
+in Fig F below:
+
+Remote
+Linux 						    Firewall with
+Server  <-------------> Internet <---------->   Dynamic IP 
+listens						    Address connects
+on port						    to port 88888 
+88888
+
+     Fig F.  IP Notification System for Dynamic IP ADSL 
+
+
+The Firewall part
+------------------
+An example script called Check.sh is listed below:
+
+[ Check.sh ]
+------------------------------------------------------------
+#!/bin/sh
+
+/sbin/ifconfig > ifconfig.txt
+    
+ 
+if  grep eth0 ifconfig.txt     
+then
+  echo -n "Firewall: " > out.txt
+  date >> out.txt
+  echo  "---------------------------------------- " >> out.txt
+  grep "P-t-P:" ifconfig.txt >> out.txt
+  echo >> out.txt
+  nc 202.188.12.3  88888 < out.txt	
+fi
+---------------------------------------------------------------
+
+The above script should be run on the Firewall which is
+connecting to Internet using the ADSL connection discussed earlier.
+Notice the line "nc 192.168.20.3 33333 < out"
+
+nc is the "netcat" program.  It is like a telnet program. In this
+case it will connect to the Remote Linux Server (assuming IP address
+is 202.188.12.3) which is listening on port 88888 and send the
+file "out.txt".
+
+The file contains the IP address of the Firewall.
+
+
+We need to create a schedule which regularly runs the Check.sh
+script.  For this, we could use "cron".  Cron is a system which
+can set timetables for doing tasks at predetermined dates and times.
+For our purpose, we would want the Firewall to run the Check.sh
+every minute.  In order to do that, we type:
+
+	crontab -e
+
+This will open the cron table for editing.  We then the following:
+
+	
+	0-59 * * * * /home/sysadmin/Check.sh
+
+Alternatively, if you wanted the crontab to run Check.sh every
+15 minutes:
+
+	0,15,30,45 * * * * /home/sysadmin/Check.sh
+
+Then, quit by typing "[ESC]:wq", ie, the vi editor command for
+writing and quitting.  We then check the table to confirm that
+the cron table is set correctly:
+
+	crontab -l
+
+The above means list the cron table.
+To check whether the "cron" daemon is running:
+
+	/etc/rc.d/init.d/crond status
+
+If it is not running, you can start it:
+
+	/etc/rc.d/init.d/crond start
+
+Note:
+One side effect of cron is that it will email a message to
+root whenever it executes a task on its table.  This causes
+root mailbox to fill up quickly. You need to tell cron not to
+notify root, or, alternatively, to clear the mbox regularly.
+
+The Remote Linux Server part
+----------------------------
+Just write and run this script called Server.sh: 
+
+[ Server.sh ]
+------------------------------- 
+#!/bin/sh
+nc -l -p 88888
+--------------------------------
+
+It causes netcat to listen on port 88888. After, at the
+most, 1 minute, the Firewall will connect and send its
+IP address.  The Server.sh will receive it and display on
+monitor and quit.
+
+If you wish to keep a log of all the Firewall IP's:
+
+	./Server.sh >> IP.log
+
+
+
+Frequent disconnects
+--------------------
+This is a common problem, as seen in /var/log/messages:
+
+
+	Inactivity timeout... something wicked happened on session 4214
+	Sent PADT
+	Modem hangup
+	Connection terminated.
+	Connect time 4.4 minutes. Sent 424374 bytes, received 16215462 bytes.
+	/etc/hotplug/net.agent: NET unregister event not supported
+	Exit.
+	ADSL connection lost; attempting re-connection.
+
+
+Solution:
+
+Change one line in the configuration file 
+	
+	/etc/ppp/pppoe.conf
+
+from
+	LCP_INTERVAL=20
+to
+	LCP_INTERVAL=5 
+
+Also, should set 
+
+	CONNECT_TIMEOUT=30
+
+to
+
+	CONNECT_TIMEOUT=0
+
+so that it will forever keep on trying upon disconnect, instead
+of giving up after 30 seconds.
+ADSL
+====
+
+Objective
+---------
+To setup ADSL static & dynamic IP connection for TmNet Streamyx.
+The ADSL static connection uses an ADSL Router, whilst the Dynamic one uses an ADSL Bridge (also known as PPPoE - PPP on Ethernet).  ADSL Bridge allows Linux to be the router and firewall. More flexibility.  
+
+What is ADSL?
+-------------
+ADSL stands for Asynchronous Digital Subscriber Line.
+Download speed is 384 kbps and upload speed is 128 kbps,
+but for Corporate ADSL, it may be much faster. It uses
+the ordinary telephone copper line to carry computer digital
+data and also voice data. 
+
+
+Setting Up an ADSL static IP connection
+----------------------------------------
+Static IP ADSL is usually subscribed by corporations.
+The modem supplied is Tmnet is Lucent ADSL Router. A UTP cable
+connects the ADSL Router to the NIC of the Firewall/Computer.
+You need to set the Firewall/Computer to the IP address
+assigned by your ISP. Fig A below shows the physical
+components.  
+
+
+
+Firewall <------> ADSL Router  <---> Splitter <--> Telephone  
+  |        UTP 	                       |            Line
+  |	    Cable    		           V 
+  |				             Telephone                 
+Switch
+  |
+  |
+ LAN				      	       
+
+       	Fig A. Connecting an ADSL Router
+
+
+Fig B. below shows an example with specifics. Assuming
+that TmNet assigns 200.200.200.2 for your ADSL modem and
+200.200.200.1 for your LAN Gateway or Firewall. Assuming
+the Firewall is installed with 2 NIC's, ie, 3Com and Accton.
+
+
+LAN                     FIREWALL                INTERNET
+                                          
+                eth0         eth1                       
+                3C509        ne2k-pci
+                (3com)       (Accton)
+192.168.0.3     192.168.0.1  200.200.200.2      200.200.200.1
+192.168.0.4
+
+	Fig B.  An ADSL plus Firewall Setup
+
+
+In the above, you should set the default gateway for each host
+in the LAN to 192.168.0.1. And set the default gateway for
+200.200.200.2 to the 200.200.200.1 
+
+If, on the other hand, you are not sharing the line, then
+there is no need for a Firewall. In such a case, just
+connect the ADSL directly to the PC, and set the PC's IP
+to 200.200.200.2 with default gateway to 200.200.200.1 as in
+Fig. C below:
+
+	PC
+     (Accton)                    ADSL Modem
+    200.200.200.2  <----------> 200.200.200.1
+                    UTP cable
+
+    Fig C.  An ADSL connection with no Firewall
+
+
+
+
+Note that the router itself usually has a public web interface on port 80. You could use another PC, connect to http://192.168.1.1 and configure the router.
+
+
+Setting Up an ADSL dynamic IP connection
+----------------------------------------
+Home dynamic IP ADSL can be router or bridge based. Initially, for
+for Home Dynamic IP ADSL, TmNet Streamyx package provides  Aztech
+Turbo 900 series bridge modem. Today, it is common to find home users using router ADSL modem as well. If you are using a router ADSL, then connect to the web interface to set the public IP as 0.0.0.0 so that it can autodetect the dynamic IP that is assigned by Streamyx. Also set the DNS servers 202.188.0.133 and 202.188.1.5.
+
+The instructions below assumes you are using an ADSL bridge modem. The connection to the PC is the same as
+Fig D, below. 
+
+
+
+Firewall <------> ADSL Bridge  <--> Telephone  
+  |        UTP 	       |            Line
+  |	    Cable          |
+  |		          Filter                 
+Switch                   |
+  |		         	 V	
+  |                  Telephone  
+ LAN				      	       
+
+       	Fig D. Connecting an ADSL Bridge 
+          (with Voice filter for Telephone)
+
+
+Note that in dynamic IP, you do not set the IP address
+of the NIC of the Firewall/Computer. The architecture is as shown
+in Fig D below.
+
+
+
+LAN                     FIREWALL                INTERNET
+                                          
+                eth0         eth1                       
+                3C509        ne2k-pci
+                (3com)       (Accton)
+192.168.0.3     192.168.0.1   No IP        IP Dynamically Assigned
+192.168.0.4
+
+	Fig E.  A ADSL - Firewall Setup for Dynamic IP 
+
+TmNet will provide the Splitter (or Filter),
+ADSL Modem and WinPOET software (which runs only on 
+Win98/ME/XP/2000). Linux uses rp-pppoe, which will be 
+explained later. PPPOE stands for "PPP on Ethernet".
+
+To check if it is already installed:
+
+	whereis adsl-connect
+	rpm -qf adsl-connect
+
+or
+	rpm -qa rp-pppoe*
+
+If it is not installed, download from www.roaringpenguin.com.
+Latest as of time of writing is:
+	
+	rp-pppoe-3.5-1.i386.rpm
+
+Also get the optional gui frontend: 
+
+	rp-pppoe-gui-3.5-1.i386.rpm
+
+Login as root and install using the rpm command:
+
+	
+	rpm -U rp-pppoe-3.5-1.i386.rpm
+	rpm -U rp-pppoe-gui-3.5-1.i386.rpm
+
+Note the -U is to update from earlier versions of rp-pppoe.
+You could use -i also, which means install.
+If you wanted to see more interactive details while the packages is
+being installed:
+
+	rpm -Uvh ...
+	
+	where,
+		v is for uniform number of hash marks, and,
+		h is for hash marks
+
+Then run the adsl-setup script. This script will ask you a series
+of questions and save the information given by the user into a
+configuration file called:
+
+	/etc/ppp/pppoe.conf
+
+Usual particulars include:
+
+	#Ethernet card connected to ADSL modem
+	ETH='eth0'
+	
+	#ADSL user name
+	USER='xyz@tmnet'
+
+	#Bring up on demand? If you set yes, it will disconnect
+	#on idle. Doesn't work well with dynamic IP. You should
+	#set no for all ADSL whether Static or Dynamic, so that
+	#it will forever attempt to reconnect whenever the  
+	#connection is lost and it will never drop the line even if 
+	#it is idle
+	DEMAND=no
+		
+	#DNS type: SERVER=obtain from server
+	DNSTYPE=SERVER
+
+	#Obtain DNS server addresses from peer
+	PEERDNS=yes
+	DNS1=     [ blank ]
+	DNS2=	  [ blank ]
+
+	#Make PPPoE connection the default route
+	DEFAULTROUTE=yes
+
+	#Connect Timeout set to 0 so that it will forever try to
+	#to reconnect after adsl-start is called
+	CONNECT_TIMEOUT=0
+
+	ACNAME=      [ blank ]
+	SERVICENAME= [ blank ]
+
+	#Use synchronous PPP? I used no, but yes should
+	#be less strain on CPU and should also work
+	SYNCHRONOUS=no	
+
+	#Clam MSS should set to 1412 if Firewall is gateway for LAN
+	CLAMPMSS=1412
+
+	#LCP echo inerval and failure count
+	LCP_INTERVAL=20
+	LCP_FAILURE=3
+
+	PPPOE_TIMEOUT=80
+		
+	#Firewalling: Set none if you have your own
+	FIREWALL=NONE
+
+	LINUX_PLUGIN=  [ blank ]
+
+	#Any extra argument to pass to pppoe
+	PPPOE_EXTRA=""
+
+	#Any extra arguments to pass to pppd
+	PPPD_EXTRA=""
+
+
+Note that the password is stored in:
+
+	/etc/ppp/pap-secrets
+	/etc/ppp/chap-secrets
+
+and not in the pppoe.conf file.
+
+
+Then, to connect, enter the command:
+
+	adsl-connect
+or
+  	 /usr/sbin/adsl-connect /etc/ppp/pppoe.conf
+
+To get the status:
+
+	adsl-status
+
+To stop the connection:
+
+	adsl-stop
+
+It is also known as dial-up connection. But there is no number
+to dial up, just a script to connect to and login to the ISP's server.
+Each time the connection is made, a different IP address is assigned.
+
+
+
+Autostart on reboot
+------------------
+Edit /etc/rc.d/rc.local with these:
+
+adsl-start &
+/etc/init.d/firewall-2.4.drop start
+route add default dev ppp0
+
+
+Notice the "&" in the rc.local script.  This makes the Start.sh
+script run as a background process. Failure to do this will
+cause linux to stop booting when it executes the Start.sh script,
+because it will "block" when it executes the script, which in turn,
+prevents linux from completing the bootup process.
+
+
+
+Auto Reconnect
+--------------
+For both the static IP and also the dynamic IP setups, once
+you do adsl-connect, the system will attempt to reconnect should
+the line gets disconnected. The connect-timeout default is 30 seconds.
+This means after 30 seconds, it will give up trying to reconnect. If
+you want it to forever try to reconnect, then edit the pppoe.conf,
+or, the conf.name file, by setting:
+
+	CONNECT_TIMEOUT=0
+
+
+
+Finding out the Dynamic IP address
+==================================
+For the dynamic IP setup, the IP address keeps changing each time
+it reconnects after a line-drop.  How can a system administrator
+ssh to the firewall to do system administration? A simple solution
+is to crontab the Firewall to send its IP address to a remote
+box every minute.  The Firewall should have a script to check
+the IP address.  The remote box should have a script to listen for
+the connection from the Firewall. The architecture is as shown
+in Fig F below:
+
+Remote
+Linux 						    Firewall with
+Server  <-------------> Internet <---------->   Dynamic IP 
+listens						    Address connects
+on port						    to port 88888 
+88888
+
+     Fig F.  IP Notification System for Dynamic IP ADSL 
+
+
+The Firewall part
+------------------
+An example script called Check.sh is listed below:
+
+[ Check.sh ]
+------------------------------------------------------------
+#!/bin/sh
+
+/sbin/ifconfig > ifconfig.txt
+    
+ 
+if  grep eth0 ifconfig.txt     
+then
+  echo -n "Firewall: " > out.txt
+  date >> out.txt
+  echo  "---------------------------------------- " >> out.txt
+  grep "P-t-P:" ifconfig.txt >> out.txt
+  echo >> out.txt
+  nc 202.188.12.3  88888 < out.txt	
+fi
+---------------------------------------------------------------
+
+The above script should be run on the Firewall which is
+connecting to Internet using the ADSL connection discussed earlier.
+Notice the line "nc 192.168.20.3 33333 < out"
+
+nc is the "netcat" program.  It is like a telnet program. In this
+case it will connect to the Remote Linux Server (assuming IP address
+is 202.188.12.3) which is listening on port 88888 and send the
+file "out.txt".
+
+The file contains the IP address of the Firewall.
+
+
+We need to create a schedule which regularly runs the Check.sh
+script.  For this, we could use "cron".  Cron is a system which
+can set timetables for doing tasks at predetermined dates and times.
+For our purpose, we would want the Firewall to run the Check.sh
+every minute.  In order to do that, we type:
+
+	crontab -e
+
+This will open the cron table for editing.  We then the following:
+
+	
+	0-59 * * * * /home/sysadmin/Check.sh
+
+Alternatively, if you wanted the crontab to run Check.sh every
+15 minutes:
+
+	0,15,30,45 * * * * /home/sysadmin/Check.sh
+
+Then, quit by typing "[ESC]:wq", ie, the vi editor command for
+writing and quitting.  We then check the table to confirm that
+the cron table is set correctly:
+
+	crontab -l
+
+The above means list the cron table.
+To check whether the "cron" daemon is running:
+
+	/etc/rc.d/init.d/crond status
+
+If it is not running, you can start it:
+
+	/etc/rc.d/init.d/crond start
+
+Note:
+One side effect of cron is that it will email a message to
+root whenever it executes a task on its table.  This causes
+root mailbox to fill up quickly. You need to tell cron not to
+notify root, or, alternatively, to clear the mbox regularly.
+
+The Remote Linux Server part
+----------------------------
+Just write and run this script called Server.sh: 
+
+[ Server.sh ]
+------------------------------- 
+#!/bin/sh
+nc -l -p 88888
+--------------------------------
+
+It causes netcat to listen on port 88888. After, at the
+most, 1 minute, the Firewall will connect and send its
+IP address.  The Server.sh will receive it and display on
+monitor and quit.
+
+If you wish to keep a log of all the Firewall IP's:
+
+	./Server.sh >> IP.log
+
+
+
+Frequent disconnects
+--------------------
+This is a common problem, as seen in /var/log/messages:
+
+
+	Inactivity timeout... something wicked happened on session 4214
+	Sent PADT
+	Modem hangup
+	Connection terminated.
+	Connect time 4.4 minutes. Sent 424374 bytes, received 16215462 bytes.
+	/etc/hotplug/net.agent: NET unregister event not supported
+	Exit.
+	ADSL connection lost; attempting re-connection.
+
+
+Solution:
+
+Change one line in the configuration file 
+	
+	/etc/ppp/pppoe.conf
+
+from
+	LCP_INTERVAL=20
+to
+	LCP_INTERVAL=5 
+
+Also, should set 
+
+	CONNECT_TIMEOUT=30
+
+to
+
+	CONNECT_TIMEOUT=0
+
+so that it will forever keep on trying upon disconnect, instead
+of giving up after 30 seconds.

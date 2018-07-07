@@ -1,0 +1,867 @@
+SAMBA
+=====
+
+Objective
+---------
+[1]   To enable Microsoft Win 98/ME to access Linux Server 
+like a windows machine, for file sharing and
+printing. To Win98/ME, the Linux Server behaves like
+another Win98/ME/NT PC.
+
+[2]   To connect to other windows machine from Linux.
+
+
+Fig A below shows a typical small office:
+
+
+
+
+
+			Internet
+			   |
+			   |
+	 Inner Office	   |	         Rooms  
+	192.168.0.x --- Firewall ----- 192.168.1.x	
+	   |     |          
+	   |     |       
+       Laser   Excel    
+     Printer   Files		  
+		
+
+	   Fig A - Firewall linking 3 networks
+	   -----------------------------------
+
+
+	Note that in Fig A. above, the Firewall is also
+        a gateway, router and also servers MySQL and Intranet
+        Web Server.
+
+	The Laser Printer is shared with both networks.
+	The Excel Files are shared with some hosts in
+	the Rooms but shared with all hosts in the Inner
+	Office.
+
+
+What is Samba
+-------------
+Samba is the set of programs developed for enabling
+Linux Server to share folders,files and printers with other
+windows PC by behaving just like a Windows machine. Other
+windows will be able to see the Linux server as an
+icon in network neighbourhood as if the Linux server
+is a windows 98/ME/NT computer and connect by double-clicking
+the Linux Icon or conect using this syntax:
+
+	\\192.168.20.3\sharename
+
+
+Adding a printer
+----------------
+You can add a printer 2 ways on Linux using either of these two:
+
+	1.	/usr/share/printconf-tui
+        2.	/usr/share/printconf-gui
+
+The first one is text-based whilst the second one is
+x-windows based.
+
+To use the first method, just enter this command:
+
+	printconf-tui
+
+and follow the instructions:
+
+	Edit Queue
+        ----------
+	Name: printer
+	Type: Local Printer Device
+	Printer Device: /dev/lp0
+	Driver: Canon BJC-210SP using bj200 driver
+		
+	
+
+Another way is to  use the control panel program in KDE/Gnome. 
+Do the following:
+
+1.  startx 
+2.  click on "KDE Control Panel"
+3.  click on the "Printer Configuration Icon"
+4.  the "printconf-gui" dialog box will open, click "New"
+5.  Then follow the online instructions
+6.  You should ensure the printer is connected to the
+    printer port and switched on.
+7.  Select "local printer".
+8.  Select the appropriate driver.
+9.  Then select "Apply".
+10. Print an ASCII text test page to confirm that it works.
+
+You should also ensure that the print server is started, if
+it is not, then start it as follows:
+
+	/etc/rc.d/init.d/lpd start
+
+
+Once you've have installed this printer, Linux can share it with
+the network using samba.
+
+Each win98 computer on the network need to install this printer,
+which is also known as a network printer. Linux is the Print
+Server.
+
+If, on the other hand, you don't have a driver for this a particular
+printer, eg, Canon LaserJet LBP810. Then you can still have 
+the client's win98 computer install it by supplying the full path
+to the printer as follows:
+
+	\\192.168.0.1\printers
+
+when installing the network printer using the Add Printer wizard
+via Start/Settings/Printers/Add Printer.
+
+
+
+Alternative is to use:
+
+	printtool
+
+which is the Redhat printer config GUI.
+
+Creating a share folder
+-----------------------
+As root:
+
+	mkdir /share
+	chmod 777 share
+
+Then cd to share and just create a test file.
+
+
+Creating user accounts
+----------------------
+To create user accounts, as root:
+
+	useradd bill
+	passwd bill 
+	...
+
+
+The configuration files for samba is in:
+
+	/etc/samba/
+
+directory. The two files you need to be concerned with
+are:
+
+	smb.conf 
+	smbpasswd
+
+Backup the files before doing anything. If smbpasswd is
+non-existent, create one.
+
+Then, 
+	smbpasswd -a bill
+        
+Enter bill's password.
+
+Note that any windows machine who wants to access must also
+log in through the "Client for Microsoft Networks" login
+dialog box, and should login with the same username and
+password as the sambpasswd above.
+
+
+Configuring Samba
+-----------------
+The samba configuration file is:
+
+	/etc/samba/smb.conf
+
+An example setting is below:
+
+snip..............................................................
+
+# This is the main Samba configuration file. You should read the
+# smb.conf(5) manual page in order to understand the options listed
+# here. Samba has a huge number of configurable options (perhaps too
+# many!) most of which are not shown in this example
+#
+# Any line which starts with a ; (semi-colon) or a # (hash) 
+# is a comment and is ignored. In this example we will use a #
+# for commentry and a ; for parts of the config file that you
+# may wish to enable
+#
+# NOTE: Whenever you modify this file you should run the command "testparm"
+# to check that you have not made any basic syntactic errors. 
+#
+#======================= Global Settings =====================================
+[global]
+
+# workgroup = NT-Domain-Name or Workgroup-Name
+   workgroup = MYGROUP
+
+# server string is the equivalent of the NT Description field
+   server string = Samba Server
+
+# This option is important for security. It allows you to restrict
+# connections to machines which are on your local network. The
+# following example restricts access to two C class networks and
+# the "loopback" interface. For more examples of the syntax see
+# the smb.conf man page
+;   hosts allow = 192.168.1. 192.168.2. 127.
+
+# if you want to automatically load your printer list rather
+# than setting them up individually then you'll need this
+   printcap name = /etc/printcap
+   load printers = yes
+
+# It should not be necessary to spell out the print system type unless
+# yours is non-standard. Currently supported print systems include:
+# bsd, sysv, plp, lprng, aix, hpux, qnx
+   printing = lprng
+
+# Uncomment this if you want a guest account, you must add this to /etc/passwd
+# otherwise the user "nobody" is used
+;  guest account = pcguest
+
+# this tells Samba to use a separate log file for each machine
+# that connects
+   log file = /var/log/samba/%m.log
+
+# Put a capping on the size of the log files (in Kb).
+   max log size = 0
+
+# Security mode. Most people will want user level security. See
+# security_level.txt for details.
+   security = user
+
+# Use password server option only with security = server
+# The argument list may include:
+#   password server = My_PDC_Name [My_BDC_Name] [My_Next_BDC_Name]
+# or to auto-locate the domain controller/s
+#   password server = *
+;   password server = <NT-Server-Name>
+
+# Password Level allows matching of _n_ characters of the password for
+# all combinations of upper and lower case.
+;  password level = 8
+;  username level = 8
+
+# You may wish to use password encryption. Please read
+# ENCRYPTION.txt, Win95.txt and WinNT.txt in the Samba documentation.
+# Do not enable this option unless you have read those documents
+   encrypt passwords = yes
+   smb passwd file = /etc/samba/smbpasswd
+
+# The following is needed to keep smbclient from spouting spurious errors
+# when Samba is built with support for SSL.
+;   ssl CA certFile = /usr/share/ssl/certs/ca-bundle.crt
+
+# The following are needed to allow password changing from Windows to
+# update the Linux sytsem password also.
+# NOTE: Use these with 'encrypt passwords' and 'smb passwd file' above.
+# NOTE2: You do NOT need these to allow workstations to change only
+#        the encrypted SMB passwords. They allow the Unix password
+#        to be kept in sync with the SMB password.
+;  unix password sync = Yes
+;  passwd program = /usr/bin/passwd %u
+;  passwd chat = *New*password* %n\n *Retype*new*password* %n\n *passwd:*all*authentication*tokens*updated*successfully*
+
+# Unix users can map to different SMB User names
+;  username map = /etc/samba/smbusers
+
+# Using the following line enables you to customise your configuration
+# on a per machine basis. The %m gets replaced with the netbios name
+# of the machine that is connecting
+;   include = /etc/samba/smb.conf.%m
+
+# This parameter will control whether or not Samba should obey PAM's
+# account and session management directives. The default behavior is
+# to use PAM for clear text authentication only and to ignore any
+# account or session management. Note that Samba always ignores PAM
+# for authentication in the case of encrypt passwords = yes
+
+;  obey pam restrictions = yes
+
+# Most people will find that this option gives better performance.
+# See speed.txt and the manual pages for details
+   socket options = TCP_NODELAY SO_RCVBUF=8192 SO_SNDBUF=8192
+
+# Configure Samba to use multiple interfaces
+# If you have multiple network interfaces then you must list them
+# here. See the man page for details.
+;   interfaces = 192.168.12.2/24 192.168.13.2/24 
+
+# Configure remote browse list synchronisation here
+#  request announcement to, or browse list sync from:
+#	a specific host or from / to a whole subnet (see below)
+;   remote browse sync = 192.168.3.25 192.168.5.255
+# Cause this host to announce itself to local subnets here
+;   remote announce = 192.168.1.255 192.168.2.44
+
+# Browser Control Options:
+# set local master to no if you don't want Samba to become a master
+# browser on your network. Otherwise the normal election rules apply
+;   local master = no
+
+# OS Level determines the precedence of this server in master browser
+# elections. The default value should be reasonable
+;   os level = 33
+
+# Domain Master specifies Samba to be the Domain Master Browser. This
+# allows Samba to collate browse lists between subnets. Don't use this
+# if you already have a Windows NT domain controller doing this job
+;   domain master = yes 
+
+# Preferred Master causes Samba to force a local browser election on startup
+# and gives it a slightly higher chance of winning the election
+;   preferred master = yes
+
+# Enable this if you want Samba to be a domain logon server for 
+# Windows95 workstations. 
+;   domain logons = yes
+
+# if you enable domain logons then you may want a per-machine or
+# per user logon script
+# run a specific logon batch file per workstation (machine)
+;   logon script = %m.bat
+# run a specific logon batch file per username
+;   logon script = %U.bat
+
+# Where to store roving profiles (only for Win95 and WinNT)
+#        %L substitutes for this servers netbios name, %U is username
+#        You must uncomment the [Profiles] share below
+;   logon path = \\%L\Profiles\%U
+
+# Windows Internet Name Serving Support Section:
+# WINS Support - Tells the NMBD component of Samba to enable it's WINS Server
+;   wins support = yes
+
+# WINS Server - Tells the NMBD components of Samba to be a WINS Client
+#	Note: Samba can be either a WINS Server, or a WINS Client, but NOT both
+;   wins server = w.x.y.z
+
+# WINS Proxy - Tells Samba to answer name resolution queries on
+# behalf of a non WINS capable client, for this to work there must be
+# at least one	WINS Server on the network. The default is NO.
+;   wins proxy = yes
+
+# DNS Proxy - tells Samba whether or not to try to resolve NetBIOS names
+# via DNS nslookups. The built-in default for versions 1.9.17 is yes,
+# this has been changed in version 1.9.18 to no.
+   dns proxy = no 
+
+# Case Preservation can be handy - system default is _no_
+# NOTE: These can be set on a per share basis
+;  preserve case = no
+;  short preserve case = no
+# Default case is normally upper case for all DOS files
+;  default case = lower
+# Be very careful with case sensitivity - it can break things!
+;  case sensitive = no
+
+#============================ Share Definitions ==============================
+[homes]
+   comment = Home Directories
+   browseable = no
+   writable = yes
+   valid users = %S
+   create mode = 0664
+   directory mode = 0775
+# If you want users samba doesn't recognize to be mapped to a guest user
+; map to guest = bad user
+
+
+# Un-comment the following and create the netlogon directory for Domain Logons
+; [netlogon]
+;   comment = Network Logon Service
+;   path = /usr/local/samba/lib/netlogon
+;   guest ok = yes
+;   writable = no
+;   share modes = no
+
+
+# Un-comment the following to provide a specific roving profile share
+# the default is to use the user's home directory
+;[Profiles]
+;    path = /usr/local/samba/profiles
+;    browseable = no
+;    guest ok = yes
+
+
+# NOTE: If you have a BSD-style print system there is no need to 
+# specifically define each individual printer
+[printers]
+   comment = All Printers
+   path = /var/spool/samba
+   browseable = no
+# Set public = yes to allow user 'guest account' to print
+   guest ok = no
+   writable = no
+   printable = yes
+
+# This one is useful for people to share files
+;[tmp]
+;  comment = Temporary file space
+;  path = /tmp
+;  read only = no
+;  public = yes
+
+# A publicly accessible directory, but read only, except for people in
+# the "staff" group
+;[public]
+;   comment = Public Stuff
+;   path = /home/samba
+;   public = yes
+;   writable = yes
+;   printable = no
+;   write list = @staff
+
+# Other examples. 
+#
+# A private printer, usable only by fred. Spool data will be placed in fred's
+# home directory. Note that fred must have write access to the spool directory,
+# wherever it is.
+;[fredsprn]
+;   comment = Fred's Printer
+;   valid users = fred
+;   path = /home/fred
+;   printer = freds_printer
+;   public = no
+;   writable = no
+;   printable = yes
+
+# A private directory, usable only by fred. Note that fred requires write
+# access to the directory.
+;[fredsdir]
+;   comment = Fred's Service
+;   path = /usr/somewhere/private
+;   valid users = fred
+;   public = no
+;   writable = yes
+;   printable = no
+
+# a service which has a different directory for each machine that connects
+# this allows you to tailor configurations to incoming machines. You could
+# also use the %U option to tailor it by user name.
+# The %m gets replaced with the machine name that is connecting.
+;[pchome]
+;  comment = PC Directories
+;  path = /usr/local/pc/%m
+;  public = no
+;  writable = yes
+
+# A publicly accessible directory, read/write to all users. Note that all files
+# created in the directory by users will be owned by the default user, so
+# any user with access can delete any other user's files. Obviously this
+# directory must be writable by the default user. Another user could of course
+# be specified, in which case all files would be owned by that user instead.
+;[public]
+;   path = /usr/somewhere/else/public
+;   public = yes
+;   only guest = yes
+;   writable = yes
+;   printable = no
+
+# The following two entries demonstrate how to share a directory so that two
+# users can place files there that will be owned by the specific users. In this
+# setup, the directory should be writable by both users and should have the
+# sticky bit set on it to prevent abuse. Obviously this could be extended to
+# as many users as required.
+;[myshare]
+;   comment = Mary's and Fred's stuff
+;   path = /usr/somewhere/shared
+;   valid users = mary fred
+;   public = no
+;   writable = yes
+;   printable = no
+;   create mask = 0765
+
+
+# To share files
+[share]
+  comment = Sharing Files
+  path = /share
+  read only = no
+  public = yes
+  writable = yes
+  printable = yes
+
+snip...............................................................
+
+
+Note the last paragraph.
+This is the directory which was created earlier. 
+Note that you could also use graphical based configuration,
+ie, "swat" which listens on port 901.
+
+To start or stop swat:
+
+	chkconfig swat on|off
+
+Then open a web-browser locally ( ie, on the server itself ) 
+and type in this URL:
+
+	http://localhost:901
+
+or
+
+	http://127.0.0.1:901
+
+You could also remotely login using xhost + remoteservername,
+telnet to the remoteservername, then start netscape and key
+in the above URL. See the chapter on Xserver for the details.
+
+To test the smb.conf for errors;
+
+	testparm
+
+You may testparm > testparm.txt since it is quite long.
+
+To enable simultaneous sharing of a file, eg, simultaneous
+edit of a Microsoft Excel file, set this in the section on
+shares:
+
+	oplocks = no
+
+For example,
+
+# To share files
+[share]
+  comment = Sharing Files
+  path = /share
+  read only = no
+  public = yes
+  writable = yes
+  printable = yes
+  oplocks = no
+
+
+
+Starting Samba Server
+---------------------
+To start, stop or restart the samba server:
+
+	/etc/rc.d/init.d/smb start|stop|restart 
+
+
+What shares are accessible?
+---------------------------
+The default setting for smb.conf is to allow anyone who has
+an account on the linux server to access their home directory
+as a "share", eg the [homes] section of smb.conf shows:
+
+
+[homes]
+   comment = Home Directories
+   browseable = no
+   writable = yes
+   valid users = %S
+   create mode = 0664
+   directory mode = 0775
+
+
+Note that before you can access , you will need to add
+the username to the samba password file 
+/etc/samba/smbpasswd :
+
+	smbpasswd -a bill
+
+eventhough you already have a password in /etc/passwd. 
+
+
+Connecting to Linux Samba from Windows PC
+-----------------------------------------
+Samba listens on port 139.
+There are a few ways to connect to port 139:
+
+eg, through
+
+	Network Neighbourhood
+
+browse through the Icons and double click on the
+LinuxServer icon, or, use Search.  But you may need
+to add this line to the "hosts" file:
+
+
+	200.188.12.23  LinuxServerName
+
+where 200.188.12.23 is the Linux server's IP address.
+	
+
+An easier way is:
+
+	Start/Run:  \\200.188.12.23\sharename
+
+
+where 200.188.12.23 is the IP address and "sharename"
+is the directory you want to access. This "sharename" is
+the name of the user's home directory on Linux, eg, if
+bill has a directory on Linux which he wishes to access,
+then:
+
+	
+	Start/Run:  \\200.188.12.23\bill
+
+
+Bill will then be asked for the password. After authentication,
+win98 will open the Windows Explorer window and show the contents
+of Bill's directory as icons. Remember, that you still need to use
+smbpasswd to add him as a samba user, even, though he already 
+has an account in linux.
+
+
+
+Connecting to Win98/ME from Linux
+---------------------------------
+If we already know the share name, we can connect:
+
+	smbclient //200.188.12.23/C
+
+where 200.188.12.23 is the Win98/ME PC and "C" is the
+share. In this case it is the C drive.
+
+If we do not know what is being shared, then we need
+to find out the NetBios name first:
+
+	nmblookup - A 200.188.12.23
+
+An example output is shown below:
+
+	FARSCAPE        <00> -         B <ACTIVE> 
+	ION             <00> - <GROUP> B <ACTIVE> 
+	FARSCAPE        <03> -         B <ACTIVE> 
+	FARSCAPE        <20> -         B <ACTIVE> 
+	ION             <1e> - <GROUP> B <ACTIVE> 
+
+
+This is the NetBios Name, ie, indicated by <00>:
+
+	FARSCAPE 
+
+The presence of number <20> indicates that File and Printer
+Sharing is enabled.
+
+
+Then we can get the "shares", using the NetBios name:
+
+	smbclient -L FARSCAPE -I 200.188.12.23 -N
+
+where FARSCAPE is the NetBios name which we got from the
+nmblookup.  The -N is to suppress password, ie, we can
+connect anonymously, provided that the user did not set
+any password for the shared folder.
+
+
+An example output is as follows:
+
+	Sharename      Type      Comment
+	---------      ----      -------
+	TEST           Disk      
+	PRINTER$       Disk      
+	CANON          Printer   
+	IPC$           IPC       Remote Inter Process Communication
+
+	Server               Comment
+	---------            -------
+
+	Workgroup            Master
+	---------            -------
+
+
+In the above, TEST is the folder that is shared.
+
+Next, we connect to the share:
+
+	smbclient //FARSCAPE/C -I 200.188.12.23
+
+where C is the share, which we got from the smbclient -L
+command. Alternatively,
+
+	smbclient //200.188.12.23/C
+
+
+
+
+Downloading or uploading Files between Linux and Windows
+--------------------------------------------------------
+
+Once you have connected to a Windows machine using smbclient,
+you will see a prompt:
+
+	smb :\>
+
+To get a list of available commands, type help:
+
+	smb :\>help
+
+Most of the usual unix commands are available:
+
+	ls, pwd, rm, mput, mget, mkdir, rmdir, tar
+
+To download files, use mget
+
+
+	smb :\>mget *.htm
+
+To upload files, use mput
+
+	smb :\>mput *.htm
+
+
+You will need to type "y", when prompted for each file.
+
+You can also run commands locally using the escape "!" just
+like in ftp:
+
+	smb :\>!pwd
+
+
+
+
+
+Graphical Login
+---------------
+The above method will give you a command line text-based
+output.  To get a graphical output, startx, open an xterm
+window,  then follow the steps below.
+
+
+Create the fat folder:
+
+	mkdir /mnt/fat
+
+
+Then create this script:
+
+	# mountfat.sh
+	#!/bin/sh
+	mount -t smbfs -o username=paul,password=mypasswd \
+	//192.168.20.3/tmp /mnt/fat
+
+If the above doesn't work, try this:
+
+	# mountfat.sh
+	#!/bin/sh
+	mount -t smbfs -o username=paul,password=mypasswd \
+	//AERYN/tmp /mnt/fat
+
+Put AERYN's IP in /etc/hosts first.
+
+If it is a null password, do this:
+
+
+	# mountfat.sh
+	#!/bin/sh
+	mount -t smbfs -o username=paul,password="" \
+	//AERYN/tmp /mnt/fat
+
+Note the "\" at the end of the 4th line, it is a continuation
+break. We need to break the line because it is too long to 
+fit onto one line.
+
+You may have to use NetBios names instead of IP addresses, as
+follows:
+
+	# mountfat.sh
+	#!/bin/sh
+	mount -t smbfs -o username=root,password= \
+	//SERVER/My\ Share /mnt/fat
+
+especially if SERVER is a host on the Internet. In such a case,
+you need to add the IP address of SERVER in:
+
+	/etc/hosts
+
+Note also the back slash "\ " above. It is used because, the
+share name has got a space:
+
+	My Share	
+
+
+Note also the null password above,
+
+	username=root,password=
+
+
+
+
+
+Chmod it to 755 then, run it as root. Once mounted, you can
+open "konqueror" and browse to /mnt/fat. You can see the files
+in graphical form just like Windows Explorer.
+
+If you find you have no write permission, then open xterm, su-
+to root then type "konqueror" from within the xterm shell.
+
+
+The remote windows PC's share is mounted on /mnt/fat
+as though it is part of the Linux hard disk.
+
+"Konqueror" is the KDE Desktop directory browser, it looks just
+like win98/ME/NT's Window Explorer. 
+
+
+To unmount:
+
+	smbumount /mnt/fat
+
+
+
+Connecting to Linux Samba from Linux
+------------------------------------
+To connect: 
+
+	smbclient //192.168.200.2/bill
+
+where 192.168.200.2 is the Linux server and bill is the 
+share which is actually the directory:
+
+	/home/bill
+
+Note that you shouldn't do this:
+
+	smbclient //192.168.200.2/bill/
+
+ie, do not add the extra "/".
+
+Alternatively, you could do Graphical Login using
+smbmount, ie, the method as described above, for connecting
+to win98/ME from Linux.
+
+
+Scanning for NetBios names
+---------------------------
+A script to scan a range of IP for NetBios names is shown
+below:
+
+[nmbookup.sh]
+snip..................................................
+#!/bin/sh
+#Usage: ./nmblookup.sh 192.168.0. 2 10
+# will scan 192.168.0.2 to 192.168.0.10
+
+if [ $# -ne 3 ]
+then
+	echo 
+	echo Usage:$0  netaddress starthost endhost
+	echo eg:   $0  192.1.1. 8 23
+	echo
+	exit
+fi
+
+i=$2
+
+while [ $i -le $3 ]
+do
+	nmblookup -A  $1$i
+	i=`expr $i + 1`
+done
+
+snip......................................................
+
+
+You should run the program as follows:
+
+	./nmblookup.sh > NetBios.txt
+
+In the NetBios.txt file, all those with line number <20>
+means that File and Printer Sharing is enabled.

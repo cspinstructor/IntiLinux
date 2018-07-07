@@ -1,0 +1,197 @@
+HANDPHONE DIALER
+----------------
+
+Objective
+---------
+To create a system that dials handphone either
+by clicking on a hyperlink on a webpage or, upon
+the occurence of a predetermined event.
+
+
+Application
+-----------
+When something go wrong, the server can call you.
+
+
+System Architecture
+-------------------
+The system is as shown in Fig A below;
+
+
+	Server --- ADSL modem ------ Internet
+          |
+	  |------- Analog Modem -- Telephone 
+
+
+	Fig A.  Handphone dialing system
+ 	--------------------------------
+
+The ADSL modem provides the web service to the Internet.
+A user can visit the web page and click on the appropriate
+hyperlink to call sysadmin.
+
+
+The scripts
+-----------
+
+The html page is as follows:
+
+[index.html]
+...................................................
+<html>
+<head>
+<title>Adrian</title>
+</head>
+<body>
+<p>
+<p> <a href="cgi-bin/CallDaddy.sh">Call Daddy</a> </body></html>
+..........................................................
+
+
+The index.html page only has one link which calls the 
+script below which is called: "CallDaddy.sh".  If my
+5 year old son wants to call me, this script will
+be called.
+
+[CallDaddy.sh]
+..............................................
+#!/bin/sh
+
+echo Content-type:text/plain
+echo
+echo Dear Adrian,
+echo
+echo The computer has called Daddy\'s handphone.
+echo Daddy will be with you in a minute.
+echo
+echo Love,
+echo Daddy
+
+/bin/sh StopCallDaddy.sh &
+/usr/bin/wvdial Handphone &
+................................................
+
+Note that the echos will inform my son that the call
+has been made. This script also calls another script
+StopCallDaddy.sh and runs it in the background. This is
+necessary otherwise, the server will repeatedly dial
+my handphone number.  The StopCallDaddy.sh script will
+killall the CallDaddy.sh script and also killall the
+wvdial process after 30 seconds. This is shown below:
+
+
+[StopCallDaddy.sh]
+.....................................
+#!/bin/sh
+
+sleep 30
+killall -9 CallDaddy.sh
+killall -9 wvdial
+......................................
+
+Note that -9 is optional, but no harm to make sure the
+processes are nuked.
+
+You would have noticed that we use wvdial program to call
+the handphone.  Therefore, the /etc/wvdial/wvdial.conf file
+is shown below:
+
+[wvdial.conf]
+.................................
+
+[Dialer Defaults]
+Modem = /dev/ttyS1
+Baud = 57600
+Init1 = ATZ
+SetVolume = 0
+Dial Command = ATDT
+
+[Dialer Tmnet]
+Username = john
+Password = jeezz
+Phone = 1515
+Inherits = Dialer Defaults
+Stupid mode = 0
+
+[Dialer Handphone]
+Username = john
+Password = jeez
+Phone = 0124428812 
+Inherits = Dialer Defaults
+Stupid mode = 1 
+..................................
+
+Note that the Username and Password are just dummies.
+wvdial expects it, or, it will complain. 
+
+
+
+
+Where to place the scripts
+--------------------------
+index.html goes in 
+
+	/var/www/html
+
+CallDaddy.sh and StopCallDaddy.sh goes to
+
+	/var/www/cgi-bin
+
+
+
+
+
+Trapping Events
+---------------
+The above example is a proof-of-concept example.
+It can be modified to call the sysadmin upon
+the happening of a predefined event, eg,
+when the firewall logs attacks, your script can
+be modified to call you, save this script as
+Check_attacks.sh and schedule it to run
+in crontab every minute:
+
+.............................................
+#syntax is wrong, this is just algorithm
+
+if [ grep RPCSTATD_ATTACK /var/log/messages 2> /dev/null ]
+	CallDaddy.sh
+fi
+...............................................
+
+
+The crontab.
+
+Do crontab -e, then:
+
+0-59 * * * * * /root/Check_attacks.sh
+
+
+The crontab, of course should be root's.
+
+The number of events that can be trapped is limited only
+by your imagination.
+
+Other possible applications:
+
+1.	if ADSL line goes down, dial sysadmin.
+	eg, ifconfig > ifconfig.txt
+	    if  grep ppp0 ifconfig.txt > /dev/null 
+		CallDaddy.sh
+	    fi
+
+2.	if some predetermined person logs in.
+	eg,  w > w.txt
+	     if  grep hacker w.txt > /dev/null 
+	  	CallDaddy.sh
+	     fi
+	
+3.	if your son is visiting pornographic websites.
+	eg, 
+	if  grep playboy /var/log/dansguardian/access.log > /dev/null 
+		CallDaddy.sh
+ 	fi
+
+	but, you need to run dansguardian, a web-content filter.  See the
+	chapter on ProxyServer.
+	

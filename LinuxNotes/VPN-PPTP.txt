@@ -1,0 +1,280 @@
+VPN - POINT-TO-POINT TUNELLING PROTOCOL (PPTP)
+-----------------------------------------------
+
+Objective
+---------
+Installing and running pptpd (PPTP server).
+
+
+What is PPTP?
+------------
+A Microsoft protocol for VPN - Virtual Private Networking.
+A generic one is described in the Chapter VPN-PPPSH.txt
+
+
+Where to get it
+---------------
+http://www.poptop.org
+
+The tarball is:
+
+	pptpd-1.1.4-b4.tar.gz
+
+Download to:
+
+	/usr/local/pptp
+
+
+Installation
+------------
+
+	cd /usr/local/pptp
+
+then,
+
+
+	tar zxvf pptpd-1.1.4-b4.tar.gz
+
+a new directory containing the installation scripts is created:
+
+	poptop-1.1.4
+
+	cd poptop-1.1.4
+
+then,
+
+	./configure
+	make
+	make install
+
+To cleanup,
+
+	make clean
+	make distclean
+
+
+
+Configuration
+-------------
+The config file is in:
+
+	/usr/local/pptp/poptop-1.1.4/samples
+
+Copy it to /etc:
+
+	cp pptpd.conf     /etc
+	cp options.pptpd  /etc/ppp
+	
+
+[pptpd.conf]
+
+
+################################################################################
+#
+# Sample PoPToP configuration file
+#
+# for PoPToP version 1.1.4-b3
+#
+################################################################################
+
+# TAG: speed
+#
+#	Specifies the speed for the PPP daemon to talk at.
+#
+#speed 115200
+
+# TAG: option
+#
+#	Specifies the location of the PPP options file.
+#	By default PPP looks in '/etc/ppp/options'
+#
+option /etc/ppp/options.pptpd
+
+# TAG: stimeout
+#
+#	Specifies timeout (in seconds) on starting ctrl connection
+#
+# stimeout 10
+
+# TAG: debug
+#
+#	Turns on (more) debugging to syslog
+#
+#debug
+
+# TAG: bcrelay <if>
+#
+#	Turns on broadcast relay to clients from interface <if>
+#
+#bcrelay eth1
+
+# TAG: localip
+# TAG: remoteip
+#
+#	Specifies the local and remote IP address ranges.
+#
+#	You can specify single IP addresses seperated by commas or you can
+#	specify ranges, or both. For example:
+#
+#		192.168.0.234,192.168.0.245-249,192.168.0.254
+#
+#	IMPORTANT RESTRICTIONS:
+#
+#	1. No spaces are permitted between commas or within addresses.
+#
+#	2. If you give more IP addresses than MAX_CONNECTIONS, it will
+#	   start at the beginning of the list and go until it gets 
+#	   MAX_CONNECTIONS IPs. Others will be ignored.
+#
+#	3. No shortcuts in ranges! ie. 234-8 does not mean 234 to 238,
+#	   you must type 234-238 if you mean this.
+#
+#	4. If you give a single localIP, that's ok - all local IPs will
+#	   be set to the given one. You MUST still give at least one remote
+#	   IP for each simultaneous client.
+#
+localip 192.168.0.1
+remoteip 192.168.0.2-254
+#remoteip 192.168.0.234-238,192.168.0.245
+# or
+#localip 192.168.0.234-238,192.168.0.245
+#remoteip 192.168.1.234-238,192.168.1.245
+# --------   EOF   --------------
+
+
+
+[options.pptpd]
+
+## CHANGE TO SUIT YOUR SYSTEM
+lock
+
+## turn pppd syslog debugging on
+debug
+
+## change 'pptpd' to whatever you specify as your server name in chap-secrets
+name pptpd
+
+proxyarp
+bsdcomp 0
+
+# This option applies if you use ppp with chapms-strip-domain patch
+#chapms-strip-domain
+
+# These options apply if you use ppp with mppe patch
+# NB! You should also apply the ChapMS-V2 patch
+#-chap
+#-chapms
+#+chapms-v2
+#mppe-128
+#mppe-stateless
+
+# These options will tell ppp to pass on these to your clients
+# To use ms-wins or ms-dns in options.pptpd it must exist in /etc/resolv.conf
+#ms-wins your.server.here
+#ms-dns your.server.here
+# ----------  EOF  ------------
+
+
+
+Starting the Server
+-------------------
+
+As root,
+
+	pptpd
+
+Checking,
+
+	netstat -tan
+
+will show tcp port 1723 listening
+
+Checking logs,
+
+	tail /var/log/messages
+
+will show 
+	pptpd : MGR : Manager process started
+	pptpd : MGR : Maximum 100 connections available 
+
+Help files
+----------
+To get help:
+
+	man pptpd.conf
+	man pptpd
+
+
+
+Windows Client 
+--------------
+Click Dial up networking and click add new.
+Select Microsoft VPN Adapter.
+To connect, double click on the new Icon in Dial Up Networking.
+Enter the username and password and click connect.
+
+
+Linux Client
+------------
+Download pptp-linux-1.3.1-1.rpm from sourceforge via the link on:
+
+	http://www.poptop.org
+
+	rpm -Uvh pptp-linux-1.3.1-1.rpm
+
+will say dependency fail because it needs:
+
+	ppp => 2.4.2 is needed
+
+but we on RedHat 8, our ppp is:
+
+
+	pppd -V
+
+	ppp v. 2.4.1
+
+Therefore, download ppp-2.4.2 from:
+
+	www.rpmfind.com
+
+You will find that ppp-2.4.2 only exists for ASPLinux, but it's OK, we 
+can use it for RedHat as well.
+
+	
+	rpm -Uvh ppp-2.4.2-0.20030618asp.i386.rpm
+
+
+Then check again:
+
+	pppd --version
+
+	pppd version 2.4.2b3
+
+Then, proceed to install pptp:
+
+	rpm -Uvh pptp-linux-1.3.1-1.rpm
+
+
+And this time, it installs successfully.
+
+To connect,
+
+	pptp <IP address>
+
+
+
+Problems
+--------
+For some reason, PPTP doesn't work well.
+I couldn't telnet, ssh, ftp, http across the tunnel.
+
+But Windows clients can connect to Linux PPTP server, and that is
+pretty much it, can't do anything really useful.
+
+I haven't tried Linux PPTP client connecting to Win200 PPTP server.
+
+Recommend using VPN-PPPSH, instead, which is much easier to setup
+and more reliable.
+
+
+

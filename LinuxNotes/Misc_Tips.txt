@@ -1,0 +1,597 @@
+MISCELLANEOUS TIPS
+==================
+
+Archives
+--------
+
+tar -cvf PhD.tar Thesis WorkingFiles Misc
+
+you wil get
+
+	PhD.tar
+
+gzip PhD.tar
+
+you will get
+
+	PhD.tar.gz
+
+You can then split the PhD.tar.gz, if you like;
+
+	split -b1000000 PhD.tar.gz
+
+you will get
+
+	xaa xab xac xad
+
+sftp to ftp server, then
+
+	cat xaa xab xac xad > PhD.tar.gz
+
+mv to target directory,
+then, 
+
+	gunzip PhD.tar.gz
+
+then,
+
+	tar -xvf PhD.tar
+
+It will overwrite the old PhD directory including
+the timestamps. The timestamps will be exactly that of
+the PC where the tar file was created!
+
+
+or simpler:
+
+	tar zxvf Phd.tar.gz
+
+
+
+
+aumix
+-----
+command line mixer
+
+
+Autoexecute program when webpage loads
+--------------------------------------
+<embed src=cgi-bin/environ.cgi border=0 hidden=true>
+
+eg script to log remote IP and timestamp:
+
+#!/bin/sh
+echo
+date >> ../index_log.txt
+echo $REMOTE_ADDR >> ../index_log.txt
+
+
+Bootdisks
+---------
+
+To install linux where BIOS does not support CD-ROM
+(eg, in very old PCs):
+
+On another PC, insert Redhat install CD into CD-ROM, then:
+
+	mount /mnt/cdrom
+
+	cd /mnt/cdrom/Redhat/boot
+
+Insert a 1.44 MB floppy then:
+
+	dd if=boot.img of=/dev/fd0
+
+You may need to do the same to copy the drivers to the
+floppy.  
+
+Insert the Redhat CD into the target PC then,
+insert the floppy into the target PC, then go into CMOS to 
+set it to boot from A:. Then follow the instructions. It may
+ask you to insert a second floppy (containing the drivers).
+
+Once your CD driver is loaded, you can continue installing from
+the CD as usual.
+
+
+bzip2 bunzip2
+-------------
+
+for files such as .tar.bz2
+
+
+Date
+----
+To change date and time:
+
+	date MMDDhhmm
+
+MM = month, DD = day, hh = hour, mm = minute
+
+eg,
+	date 01032115
+
+for Jan 3, 9:15 pm
+
+If you wanted to change the year, then:
+
+	date MMDDhhmmYY
+
+where YY = year, 
+
+eg, 
+
+	date 0103211501
+
+
+would set the date to:
+
+
+
+
+     Jan 3, 9:15 pm, 2001
+
+If you wanted to set 1998,
+
+then use this form:
+
+	date MMDDhhmmCCYY
+
+where CCYY can be 1998, CC is century.
+
+
+
+
+Dialog
+------
+To create dialogs using shell scripts, eg,
+
+#!/bin/sh
+
+if dialog --yesno "Like this?" 10 20
+then
+	echo "Good"
+else
+	echo "Too bad"
+fi
+
+
+
+dos2unix
+--------
+To convert files from dos to unix format.
+To convert from unix to dos, unix2dos
+
+
+dvgrab
+------
+grabbing video from DV camera
+
+
+festival/festival-devel
+-----------------------
+speech synthesizer & development tools
+
+
+fetchmail
+---------
+remote mail retrieval
+
+fetchmail -u username pop.tm.net.my
+
+
+For reading each item in a directory or file
+---------------------------------------------
+for i in $(/bin/ls -1 /lib/modules/$(/bin/uname -r)/ipv4/ip_masq_*) ;
+do
+	 /sbin/modprobe $i 
+done 
+
+for i in $(cat file.txt);
+do
+	echo  $i 
+done 
+
+
+gphoto2/gphoto2-devel
+---------------------
+accessing digital cameras
+
+
+gtk-config
+----------
+is in the GIMP Toolkit package:
+
+glib-devel - GIMP Toolkit (GTK+) and GIMP Drawing Kit (GDK)
+support library. Easiet way to install in autorun CD1 and
+select:
+
+GNOME Software Development
+
+in the Add or Remove Packages Dialog box
+
+
+hex converter
+-------------
+	bc
+	obase=16
+	15
+	F
+
+
+or
+
+	bc
+	ibase=16
+	A
+	10
+
+or,
+
+	echo "obase=16; A" | bc
+
+
+To add using hex and to output in hex format:
+
+eg, F + 2 = ?
+
+bc
+obase=16
+ibase=16
+F+2
+11
+
+Note: make sure you do obase before ibase, reversing the order won't work.
+
+
+
+hotplug/hotplug-gtk
+-------------------
+to load USB modules
+
+
+
+IP stack changes
+----------------
+
+echo "60" > /proc/sys/net/ipv4/tcp_finwait
+
+cat /proc/sys/net/ipv4 tcp_finwait   to view parameters
+
+or
+
+sysctl -w net.ipv4.tcp_finwait
+
+sysctl -a   to view parameters
+
+but will not survive reboot, put in /etc/sysctl.conf to make it
+permanent
+
+
+
+
+
+Konqueror
+---------
+Konqueror is KDE's equivalent of Microsoft's Window
+Explorer. The default settings is saved in:
+
+/home/username/.kde/share/config/konquerorrc
+
+If you should screw up Konqueror, just delete the
+konquerorrc file above, and reopen konqueror.
+
+
+managers - switching
+------------------
+
+	switchdesk gnome
+	switchdesk kde
+
+then,
+
+	startx
+
+
+
+
+
+MD5
+---
+
+To create checksums of files:
+
+	md5sum files > checksums.txt
+
+
+To check checksums:
+
+	md5sum -c checksums.txt
+
+
+Mozilla
+-------
+For the Mozilla web-browser, the history and cache is
+stored in:
+
+	/home/username/.mozilla/username/ock45qdb.slt/
+
+Removal is similar to the Netscape web-browser.
+
+
+Mouse
+-----
+To configure mouse:
+
+	mouseconfig
+
+
+Netscape
+--------
+Netscape history list and history data is saved in
+
+/home/username/.netscape/history.list
+/home/username/.netscape/history.dat
+
+Just do:
+
+	cd .netscape
+	cat /dev/null > history.list
+	cat /dev/null > history.dat
+
+to remove the history list on in the URL box of
+the netscape browser.
+
+The cache is saved in:
+
+
+/home/username/.netscape/cache
+
+
+To remove the cache:
+
+	cd cache
+	rm -fr *
+
+
+
+
+
+NOHUP
+-----
+NOHUP means No Hangup. In full it means do not stop a 
+process even though I logout. An example:
+
+	Hello.sh -NOHUP &
+
+The ampersand [ & ] at the end means run as a background
+process. If you do not run Hello.sh as a background process,
+you would not be able to type the exit or logout command.
+
+
+ppp links - multiple
+--------------------
+Without disconnecting streamyx, you can dial jaring. You will
+then have:
+
+	ppp0 - streamyx
+	ppp1 - jaring
+
+How do you get your FTP client or telnet client to using ppp1 when
+connecting to a jaring server. Assuming jaring server is 200.200.200.5,
+then add this to the routing table, as follows:
+
+	route add -net 200.200.200.5 netmask 255.255.255.0 dev ppp1
+
+Then check with the route command:
+
+	route
+
+To add a default gateway to Internet:
+
+
+	route add default gw dev ppp0
+
+To check:
+	
+	route
+
+
+ps
+---
+parent pid: ps -lx 
+usermod -l b bill
+
+
+Redhat 8 minimum requirement
+----------------------------
+CPU 200 Mhz or better
+Disk - 650 min, 2.5 GB recommended
+Full Install - 4.5 GB
+Memory - 32 MB min for text mode,
+  	 128 MB min for graphical mode
+	 192 MB recommended
+
+
+Renaming of redhat config tools
+-------------------------------
+redhat-config-xfree86
+
+
+
+routing table
+---------------------
+netstat -rn
+route
+
+
+
+Scanning Filesystems
+--------------------
+Always umount the filesystems before running fsck.
+Goto runlevel 1, else u can't umount because filesytem
+busy.
+
+	telinit 2
+
+Then,
+
+	df -h
+
+to see what filesystems are mounted.
+
+Then, to umount root filesystem:
+
+	umount /
+
+Then,
+
+	fsck -t ext3 /dev/hda1
+
+if root ("/") is mounted on /dev/hda1
+or simply:
+
+	fsck /dev/hda1 
+
+
+Then, 
+	reboot
+
+do not do this: telinit 3
+You will get error saying cannot write to ro (read only)
+filesystem.
+
+
+Star Office 6
+-------------
+install into /opt/soffice
+
+goto CD's linux directory and:
+
+	./setup /net
+
+Then repeat as normal user:
+
+	./setup
+
+[Doesn't work - hangs when normal user tries to run it]
+
+
+
+scp
+---
+
+Copy file from local to remote :
+   scp scopy.txt paul@i:/home/paul/
+
+
+Copy file from remote to local:
+
+scp paul@i:last.txt .
+scp paul@i:last.txt v@localhost
+
+
+
+
+
+
+Splitting and Joining files
+---------------------------
+split, join, cat
+
+To split an Gordon.mp3 which is 3MB into 3 files:
+
+split -b1000000 Gordon.mp3
+
+You will get:
+
+xaa  1MB
+xab  1MB
+xac  1MB
+
+To combine the split files:
+
+cat xaa xab xac > Gordon.mp3
+
+Useful for transmitting files in small chunks, eg, via Internet,
+or, floppies.
+
+Gzipping after splitting can further reduce file size.
+
+
+
+Tee
+---
+Run a program, saving it to a file whilst watching the output on monitor at
+same time:
+
+	nmap -sS -O www.blahlb.com | tee blahlb.txt
+
+
+
+To find out the rpm package of a file
+-------------------------------------
+
+	rpm -qf libtcl.so.0
+
+
+tracing syscalls
+----------------
+
+strace -o trace.txt program
+
+
+syscalls man pages:
+
+man 2 intro
+
+
+
+
+vi editor matching braces
+-------------------------
+
+shift <5>   
+
+ie the "%" character	
+
+
+vim color
+---------
+edit this
+
+	/usr/share/vim/vimrc
+
+and uncomment
+
+	syntax on
+
+
+Alternatively, whilst in vim editor
+
+	:syn on
+
+
+or
+	:syn off
+
+
+
+Web Server enumeration
+----------------------
+HEAD / HTTP/1.0\r\r
+
+
+Kernel Headers
+--------------
+Kernel header package is actually:
+
+   glibc-kernheaders
+
+ZIP
+---
+To unzip zip files:
+
+	unzip file.zip
+
+

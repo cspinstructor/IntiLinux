@@ -1,0 +1,222 @@
+X Server
+========
+
+Objective
+---------
+[1] How to remotely connect to Xserver and run GUI applications
+    remotely.
+[2] How to change window managers
+
+
+
+
+[1] Remote Connection to Xserver
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+What is Xserver
+---------------
+This is the daemon that provides the Graphical User Interface,
+or windows Interface. Usually, the user would connect to the 
+Xserver locally. However, it is also possible to do so remotely
+across the network.
+
+Connecting to Xserver Locally
+------------------------------
+Simple do this:
+
+	startx
+
+and the Window manager will take over.  Two common window 
+managers are KDE and Gnome. Whichever was set as default will
+start.
+
+
+Connecting accross the Network
+------------------------------ 
+Assume your PC is called Stargate and the remote PC is
+Farscape. And you wish to connect to Farscape and run GUI-based
+applications on Farscape but to display the output on Stargate.
+
+You are sitting in front of Stargate.  All commands will be
+typed on Stargate. Farscape is a thousand miles away.
+You need to startx, just type:
+
+	startx
+
+KDE will start (assuming you set KDE as default), then, 
+open an xterm within KDE. Type:
+
+	xhost +
+
+to disable access control list and enable all hosts to connect
+to your computer. If you wanted to reenable access control, type:
+
+	xhost -
+
+To specifically enable a host to connect, eg, to enable Farscape to
+connect to Stargate,
+
+	xhost + Farscape
+
+or, if you know the IP,
+
+	xhost + 202.123.222.3
+
+Then, you could telnet or ssh to Farscape from within the xterm
+window which you open in KDE,
+
+	ssh Farscape
+
+after, logging in, you can run any GUI-based application program,
+eg,
+
+	gftp
+	konqueror [ file browser ]
+	netscape
+	gphoto
+
+However, if you had telnetted in instead of ssh, and you can't get
+a connectin to Xserver,  then you may  need to
+do this after having logged in via the xterm window:
+
+	export DISPLAY=Stargate:0
+
+However, it is advisable to use ssh for security.
+
+
+
+Lindows Resolution Settings
+---------------------------
+The Default resolution for Lindows OS 2 is 1024 x 768, to change it to
+800 x 600, we edit this file:   
+
+	/etc/X11/XF86Config-4
+
+
+by changing the following lines in the "#res 1024 768" section:
+
+
+
+
+# res 1024 768
+Section "Screen"
+	Identifier	"Screen1"
+	Device	"Device1"
+	Monitor	"Monitor1"
+	DefaultDepth	16
+	SubSection	"Display"
+		Depth	4
+		Modes	"1024x768"	"800x600"	"640x480"
+	EndSubSection
+	SubSection	"Display"
+		Depth	8
+		Modes	"1024x768"	"800x600"	"640x480"
+	EndSubSection
+	SubSection	"Display"
+		Depth	15
+		Modes	"1024x768"	"800x600"	"640x480"
+	EndSubSection
+	SubSection	"Display"
+		Depth	16
+		Modes	"1024x768"	"800x600"	"640x480"
+	EndSubSection
+	SubSection	"Display"
+		Depth	24
+		Modes	"1024x768"	"800x600"	"640x480"
+	EndSubSection
+	SubSection	"Display"
+		Depth	32
+		Modes	"1024x768"	"800x600"	"640x480"
+	EndSubSection
+EndSection
+
+
+Note this SubSection:
+
+
+	SubSection	"Display"
+		Depth	16
+		Modes	"1024x768"	"800x600"	"640x480"
+	EndSubSection
+
+
+At the "Modes" line, delete the "1024x768" part:
+
+
+	SubSection	"Display"
+		Depth	16
+		Modes	"800x600"	"640x480"
+	EndSubSection
+
+
+
+Then reboot.
+
+
+
+By default, x looks at the Depth 16 SubSection as specified under 
+"Default Depth", and tries all the resolutions from left to right and uses
+the first one that works. This means it will try the resolutions in this order:
+
+
+		"1024x768"
+		"800x600"
+		"640x480"
+
+By deleting the first entry, X will try it in this order:
+
+
+		"800x600"
+		"640x480"
+
+and consequently uses the "800x600" resolution.
+
+
+There is no Xconfigurator utility in Lindows OS 2.
+
+
+
+
+
+[2] How to change window managers
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+For Redhat 7.x,
+
+startx --> /usr/X11R6/bin/xinit --> checks for:
+		     
+		     [a] $HOME/.xinitrc
+		     [b] else runs xinitrc
+		     [c] /etc/X11/xinitrc
+		           |
+			   | checks for
+			   V
+		        $HOME/.Xlients, if none then
+						|
+						|
+						V
+	  	   			/etc/X11/Xclients
+			   			|
+			   			|checks
+			   			V
+					/etc/sysconfig/desktop	
+			   
+
+					for preferred Manager.
+
+					
+Therefore put your preferred manager in /etc/sysconfig/Desktop,
+eg:
+
+	DESKTOP="GNOME"
+
+or,
+
+	DESKTOP="KDE"
+
+defined in /etc/X11/Xclients
+
+
+GNOME is gnome-session
+KDE is startkde
+
+

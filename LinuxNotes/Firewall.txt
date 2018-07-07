@@ -1,0 +1,778 @@
+FIREWALL
+========
+
+Objective
+---------
+To understand some common firewall rulesets.
+This chapter focuses only on writing the rulesets
+not the physical topology of a network with 
+firewalls, which is covered in other chapters.
+
+
+What programs we need
+---------------------
+What we need is iptables and its modules. It is already
+included in RedHat. iptables is the firewall administration
+program. For this chapter it is v.1.2.3.
+
+The firewall rulesets are contained in rc.firewall-2.4
+or any name you wish to call it and put in /etc/rc.d
+
+The script that is used to read the ruleset is
+firewall-2.4 or whatever you wish to call it and is
+put in /etc/rc.d/init.d
+
+I call them rc.firewall-2.4 and firewall-2.4 respectively 
+because, I copied and paste them from the IP-Masquerading
+HOWTO, which happened to use the "2-4" version. Since 
+then, I have modified the contents quite a lot, yet retained
+the name for convenience.
+
+
+Starting, Restarting and Stopping
+----------------------------------
+To start, restart or stop the firewall:
+
+	/etc/rc.d/init.d/firewall-2.4 start|restart|stop
+
+This script is shown below:
+
+
+snip....................................................
+
+#!/bin/sh
+#
+# chkconfig: 2345 11 89
+#
+# description: Loads the rc.firewall-2.4 ruleset.
+#
+# processname: firewall-2.4
+# pidfile: /var/run/firewall.pid
+# config: /etc/rc.d/rc.firewall
+# probe: true
+
+# ---------------------------------------------------------------
+# v02/09/02
+#
+# Part of the copyrighted and trademarked TrinityOS document.
+# http://www.ecst.csuchico.edu/~dranch
+#
+# Written and Maintained by David A. Ranch
+# dranch@trinnet.net
+#
+# Updates
+# -------
+#
+# ----------------------------------------------------------------------------
+
+
+# Source function library.
+. /etc/rc.d/init.d/functions
+
+# Check that networking is up.
+
+# This line no longer work with bash2
+#[ ${NETWORKING} = "no" ] &#38;&#38; exit 0
+# This should be OK. 
+[ "XXXX${NETWORKING}" = "XXXXno" ] &#38;&#38; exit 0
+
+[ -x /sbin/ifconfig ] || exit 0
+
+# The location of various iptables and other shell programs
+#
+#   If your Linux distribution came with a copy of iptables, most
+#   likely it is located in /sbin.  If you manually compiled
+#   iptables, the default location is in /usr/local/sbin
+#
+# ** Please use the "whereis iptables" command to figure out
+# ** where your copy is and change the path below to reflect
+# ** your setup
+#
+#IPTABLES=/usr/local/sbin/iptables
+#######  PAUL MODIFIED ###########
+IPTABLES=/sbin/iptables
+
+# See how we were called.
+case "$1" in
+  start)
+    /etc/rc.d/rc.firewall-2.4
+    ;;
+
+  stop)
+    echo -e "\nFlushing firewall and setting default policies to DROP\n"
+    $IPTABLES -P INPUT DROP
+    $IPTABLES -F INPUT
+    $IPTABLES -P OUTPUT DROP
+    $IPTABLES -F OUTPUT
+    $IPTABLES -P FORWARD DROP
+    $IPTABLES -F FORWARD
+    $IPTABLES -F -t nat
+
+    # Delete all User-specified chains
+    $IPTABLES -X
+    #
+    # Reset all IPTABLES counters
+    $IPTABLES -Z
+    ;;
+
+  restart)
+        $0 stop
+        $0 start
+        ;;
+
+  status)
+        $IPTABLES -L
+        ;;
+
+  mlist)
+    cat /proc/net/ip_conntrack
+    ;;
+
+  *)
+        echo "Usage: firewall-2.4 {start|stop|status|mlist}"
+        exit 1
+esac
+
+
+
+echo -e "\nDone.\n"
+
+snip.................................................
+
+
+
+
+Designing the Firewall
+----------------------
+To all intents and purposes, the rulesets contained in
+/etc/rc.d/rc.firewall-2.4  IS the firewall. Designing a
+firewall refers to the writing of the rulesets therein.
+
+
+A firewall template
+--------------------
+Below is an example of an rc.firewall-2.4:
+
+snip............................................................
+#!/bin/sh
+# for dhcp server based -  ie filtering based on mac addresses only
+# can use for non-dhcp as well
+echo -e "\n\nLoading rc.firewall ..\n"
+
+IPTABLES=/sbin/iptables
+
+#Setting the EXTERNAL and INTERNAL interfaces for the network
+# eth0 is 3c509 for LAN
+# eth1 is Accton ne2k-pci for ADSL
+EXTIF="ppp0" #on eth1
+INTIF="eth0"
+
+# Need to verify that all modules have all required dependencies
+/sbin/depmod -a
+
+# Loading Modules
+/sbin/insmod ip_tables
+
+#  Loading stateful tracking 
+/sbin/insmod ip_conntrack
+
+#Load the FTP tracking mechanism for full FTP tracking
+/sbin/insmod ip_conntrack_ftp
+
+#Load the IRC tracking mechanism for full IRC tracking
+/sbin/insmod ip_conntrack_irc
+
+#Load the general IPTABLES NAT code - "iptable_nat"
+/sbin/insmod iptable_nat
+
+#Loads the FTP NAT functionality into the core IPTABLES code
+/sbin/insmod ip_nat_ftp
+
+# enabling forwarding
+echo "1" > /proc/sys/net/ipv4/ip_forward
+
+# Dynamic IP users:
+echo "1" > /proc/sys/net/ipv4/ip_dynaddr
+
+# Clearing any existing rules and setting default policy.."
+$IPTABLES -P INPUT ACCEPT
+$IPTABLES -F INPUT 
+$IPTABLES -P OUTPUT ACCEPT
+$IPTABLES -F OUTPUT 
+$IPTABLES -P FORWARD DROP
+$IPTABLES -F FORWARD 
+$IPTABLES -t nat -F
+
+
+
+
+
+# redirect to dansguardian-squid for content filtering
+# to enable uncensored surfing, just comment it out and restart 
+# the firewall
+#$IPTABLES -t nat -A PREROUTING -p tcp --dport 80 \
+# -j REDIRECT --to-port 8080 
+
+
+
+
+
+# US Hacker 
+$IPTABLES -A INPUT -i $EXTIF -s 19.93.221.107 -j LOG --log-prefix "US: " 
+$IPTABLES -A INPUT -i $EXTIF -s 19.93.221.107 -j DROP 
+
+# Bugbear
+$IPTABLES -A FORWARD -p tcp --sport 36794 -j LOG --log-prefix "Bugbear: " 
+$IPTABLES -A FORWARD -p tcp --sport 36794 -j DROP #bugbear backdoor
+$IPTABLES -A FORWARD -p tcp --dport 36794 -j LOG --log-prefix "Bugbear: " 
+$IPTABLES -A FORWARD -p tcp --dport 36794 -j DROP #bugbear backdoor
+
+
+
+# Adrian  
+$IPTABLES -A FORWARD -i $INTIF -o $EXTIF -s 192.168.0.4 -j DROP 
+
+
+
+# Annie
+#$IPTABLES -A FORWARD -i $INTIF -o $EXTIF \
+# -s 192.168.0.25 -m mac --mac-source 00:08:A1:19:90:4A  -j ACCEPT 
+$IPTABLES -A FORWARD -i $INTIF -o $EXTIF \
+ -m mac --mac-source 00:08:A1:19:90:4A  -j ACCEPT 
+
+# Notebook
+$IPTABLES -A FORWARD -i $INTIF -o $EXTIF \
+ -m mac --mac-source 00:E0:98:99:7A:B0 -j ACCEPT 
+
+# Must have this line, or you can't get anything in
+# from the Internet, eg, web pages 
+$IPTABLES -A FORWARD -i $EXTIF -o $INTIF -j ACCEPT
+
+# Enabling SNAT (MASQUERADE) functionality on $EXTIF"
+$IPTABLES -t nat -A POSTROUTING -o $EXTIF -j MASQUERADE
+
+
+snip..........................................................
+
+
+
+You will notice from the first line that it is a bash script:
+
+	#!/bin/sh
+
+After declaring the variables:
+
+	EXT and INT
+
+the next important part is the POLICY:
+
+snip.......................................................
+
+# Clearing any existing rules and setting default policy.."
+$IPTABLES -P INPUT ACCEPT
+$IPTABLES -F INPUT 
+$IPTABLES -P OUTPUT ACCEPT
+$IPTABLES -F OUTPUT 
+$IPTABLES -P FORWARD DROP
+$IPTABLES -F FORWARD 
+$IPTABLES -t nat -F
+
+snip..........................................................
+
+
+As you can see you set the Policy then flush.
+P = Policy
+F = flush
+t = table
+
+
+Logging
+-------
+Here are some examples of Logging:
+
+# US Hacker 
+$IPTABLES -A INPUT -i $EXTIF -s 19.93.221.107 -j LOG --log-prefix "US: " 
+$IPTABLES -A INPUT -i $EXTIF -s 19.93.221.107 -j DROP 
+
+# Bugbear
+$IPTABLES -A FORWARD -p tcp --sport 36794 -j LOG --log-prefix "Bugbear: " 
+$IPTABLES -A FORWARD -p tcp --sport 36794 -j DROP #bugbear backdoor
+$IPTABLES -A FORWARD -p tcp --dport 36794 -j LOG --log-prefix "Bugbear: " 
+$IPTABLES -A FORWARD -p tcp --dport 36794 -j DROP #bugbear backdoor
+
+
+It will log to /var/log/messages.
+-j LOG does nothing to the packet. You need to have a second line
+to -j ACCEPT, -j DROP, or, -j REJECT
+
+Thereafter use grep to search:
+
+	grep Bugbear /var/log/messages > Bugbear.txt
+
+
+
+Tables
+------
+There are 3 tables: filter, NAT and mangle.
+To use a table:
+
+	$IPTABLES -t nat -F
+	$IPTABLES -t nat -A PREROUTING -p tcp --dport 80 \
+		  -j REDIRECT --to-port 8080 
+
+
+The default is the "filter" table.
+
+
+Chains
+------
+
+There are 3 chains:
+
+	INPUT, OUTPUT, FORWARD
+
+"- A" means append a rule to a chain.
+
+INPUT refers to packets coming into the firewall.
+OUTPUT refers to packets going out to the internet.
+
+FORWARD refers to routing a packet from one interface to another
+interface. Interface means NIC, eg, eth0, eth1, or, modem, eg,
+ppp0.
+
+
+Matching Rulesets
+-----------------
+The first rulesets that matches prevails. Only when none of the
+rulesets match, it will apply the default, which was defined 
+using the policy statement, "-P".
+
+If the Policy is ACCEPT, then you must write rules to DROP.
+If the Policy is DROP, then you must write rules to ACCEPT.
+
+For example, an INPUT ACCEPT policy:
+	
+	# ACCEPT Policy
+	iptables -P INPUT ACCEPT
+	iptables -F INPUT
+
+	iptables -A INPUT -s 202.123.345.12 -j DROP
+
+	
+and,an INPUT DROP policy:
+
+	# DROP Policy 
+	iptables -P INPUT DROP
+	iptables -F INPUT
+
+	iptables -A INPUT -s 202.123.345.12 -j ACCEPT
+
+
+Fig A below shows the chains.
+
+
+Incoming
+Packets  ----> Routing ---> FORWARD ----->
+                 |		 	   ^
+	         |		 	   |
+	         V	         	   |
+	       INPUT          		 OUTPUT
+					   ^
+					   |
+					   |
+					Outgoing
+			      		Packets 
+
+
+   Fig A.  INPUT, FORWARD and OUTPUT Chains
+   ----------------------------------------	 			  	
+   (Adapted from Ziegler, 2002 at p.84)
+
+
+
+
+
+Difference between INPUT/OUTPUT and FORWARD
+-------------------------------------------
+
+INPUT and OUTPUT refers to the input and output to and from the
+machine which is running the firewall. Fig B shows this.
+
+
+
+  		----->  INPUT  ---->  Firewall  
+
+ 		<-----  OUTPUT <----   machine
+
+
+  	     Fig B.  INPUT and OUTPUT to Firewall
+             ------------------------------------
+
+
+
+FORWARD means relaying from one network to another network. Fig C
+shows this.
+
+
+
+                           [Firewall
+                            Machine]
+
+      192.168.0.x  <------> FORWARD <----->   192.168.1.x
+        network                                network
+
+
+
+	   	Fig C.  FORWARDING packets
+           	--------------------------
+
+
+
+Note that any of the networks in Fig C. above could very well be the 
+Internet.
+
+
+The relationship between INPUT and FORWARDING is shown in Fig A earlier.
+The INPUT and and OUTPUT chains are different packet pathways from the
+FORWARD chain.  But the pathways could get complicated if you are running
+a local DNS server within the LAN.
+
+
+
+Easy Firewall
+------------
+The rc.firewall-2.4 described above is generous. It works.
+The policy is INPUT ACCEPT and OUTPUT ACCEPT.  What we 
+really control is the FORWARD which we set to DROP.
+
+
+With the above policy, we write rulesets to *block* access. This
+type of firewall is easy to maintain.
+
+
+For a stronger firewall, we should set INPUT and OUTPUT to DROP.
+With such policy, we write rulesets to *allow* access. It is more
+secure but cripples the network, unless you are extremely careful
+to make sure that the ports required by services are opened - both
+TCP and UDP.  Designing such firewalls requires in depth knowledge
+of networking protocols. But the payoff is that it is extremely
+secure.
+
+
+
+
+
+Block Internet inbound to services
+----------------------------------
+
+# Block inbound to http, ftp and https
+$IPTABLES -A INPUT -i $EXTIF -p tcp --dport 80 -j DROP  
+$IPTABLES -A INPUT -i $EXTIF -p tcp --dport 21 -j DROP  
+$IPTABLES -A INPUT -i $EXTIF -p tcp --dport 443 -j DROP  
+
+
+Allowing Internet inbound to LAN hosts
+--------------------------------------
+See notes VNC.txt
+
+
+
+
+Blocking attackers based on host IP address
+--------------------------------------------
+
+$IPTABLES -A INPUT -i $EXTIF -s  202.187.125.253 -j LOG --log-prefix "Drop: "
+$IPTABLES -A INPUT -i $EXTIF -s  202.187.125.253 -j DROP
+
+
+
+Blocking attackers based on network address
+-------------------------------------------
+$IPTABLES -A INPUT -i $EXTIF -s  61.154.0.0/16   -j LOG --log-prefix "Drop: "
+$IPTABLES -A INPUT -i $EXTIF -s  61.154.0.0/16   -j DROP 
+
+
+
+
+
+
+
+
+A MORE SECURE FIREWALL
+=====================
+
+[rc.firewall-2.4.drop]
+snip......................................
+
+#!/bin/sh
+# for dhcp server based -  ie filtering based on mac addresses only
+# can use for non-dhcp as well
+# Added VNC 30th March, 2003
+# Changed policy to DROP by default after getting hacked from
+# a Taiwanese hacker - 28th April, 2003
+# the policies are in /etc/rc.d/init.d/firewall-2.4
+echo -e "\n\nLoading rc.firewall ..\n"
+
+IPTABLES=/sbin/iptables
+
+#Setting the EXTERNAL and INTERNAL interfaces for the network
+# eth0 is 3c509 for LAN
+# eth1 is Accton ne2k-pci for ADSL
+EXTIF="ppp0" #on eth1
+INTIF="eth0"
+
+# Need to verify that all modules have all required dependencies
+/sbin/depmod -a
+
+# Loading Modules
+/sbin/insmod ip_tables
+
+#  Loading stateful tracking 
+/sbin/insmod ip_conntrack
+
+#Load the FTP tracking mechanism for full FTP tracking
+/sbin/insmod ip_conntrack_ftp
+
+#Load the IRC tracking mechanism for full IRC tracking
+/sbin/insmod ip_conntrack_irc
+
+#Load the general IPTABLES NAT code - "iptable_nat"
+/sbin/insmod iptable_nat
+
+#Loads the FTP NAT functionality into the core IPTABLES code
+/sbin/insmod ip_nat_ftp
+
+# enabling forwarding
+echo "1" > /proc/sys/net/ipv4/ip_forward
+
+# Dynamic IP users:
+echo "1" > /proc/sys/net/ipv4/ip_dynaddr
+
+
+
+# redirect to dansguardian-squid for content filtering
+# to enable uncensored surfing, just comment it out and restart 
+# the firewall
+#$IPTABLES -t nat -A PREROUTING -p tcp --dport 80 \
+# -j REDIRECT --to-port 8080 
+#$IPTABLES -t nat -A PREROUTING -s 192.168.0.4 -p tcp --dport 80 \
+# -j REDIRECT --to-port 8080 
+
+
+
+
+# Allow inbound access to VNC server
+#$IPTABLES -t nat -A PREROUTING -i $EXTIF -p tcp --dport 5900 \
+# -j DNAT --to-destination 192.168.0.3:5900 
+# 219.92.0.0 to 219.95.0.0 is streamyx
+$IPTABLES -t nat -A PREROUTING -i $EXTIF \
+          -s 219.92.0.0/16 -p tcp --dport 5900 \
+          -j DNAT --to-destination 192.168.0.3:5900 
+
+$IPTABLES -t nat -A PREROUTING -i $EXTIF \
+          -s 219.93.0.0/16 -p tcp --dport 5900 \
+          -j DNAT --to-destination 192.168.0.3:5900 
+
+$IPTABLES -t nat -A PREROUTING -i $EXTIF \
+          -s 219.94.0.0/16 -p tcp --dport 5900 \
+          -j DNAT --to-destination 192.168.0.3:5900 
+
+$IPTABLES -t nat -A PREROUTING -i $EXTIF \
+          -s 219.95.0.0/16 -p tcp --dport 5900 \
+          -j DNAT --to-destination 192.168.0.3:5900 
+
+
+# Allow LAN access to server
+$IPTABLES -A INPUT -i $INTIF -s 192.168.0.0/24 -j ACCEPT 
+$IPTABLES -A OUTPUT -o $INTIF -d 192.168.0.0/24 -j ACCEPT 
+
+# Allow iicpen.intipen.edu.my access to server
+$IPTABLES -A INPUT -i $EXTIF -s 202.186.197.169 -j ACCEPT 
+$IPTABLES -A OUTPUT -o $EXTIF -d 202.186.197.169 -j ACCEPT 
+
+
+# Adrian  
+$IPTABLES -A FORWARD -i $INTIF -o $EXTIF -s 192.168.0.4 -j ACCEPT  
+
+
+# Annie
+#$IPTABLES -A FORWARD -i $INTIF -o $EXTIF \
+# -s 192.168.0.25 -m mac --mac-source 00:08:A1:19:90:4A  -j ACCEPT 
+$IPTABLES -A FORWARD -i $INTIF -o $EXTIF \
+ -m mac --mac-source 00:08:A1:19:90:4A  -j ACCEPT 
+
+# Notebook
+$IPTABLES -A FORWARD -i $INTIF -o $EXTIF \
+ -m mac --mac-source 00:E0:98:99:7A:B0 -j ACCEPT 
+
+# Must have this line, or you can't get anything in
+# from the Internet, eg, web pages 
+$IPTABLES -A FORWARD -i $EXTIF -o $INTIF -j ACCEPT
+
+# Enabling SNAT (MASQUERADE) functionality on $EXTIF"
+$IPTABLES -t nat -A POSTROUTING -o $EXTIF -j MASQUERADE
+
+snip.................................................
+
+
+[firewall-2.4.drop]
+snip...............................................
+
+#!/bin/sh
+#
+# chkconfig: 2345 11 89
+#
+# description: Loads the rc.firewall-2.4 ruleset.
+#
+# processname: firewall-2.4
+# pidfile: /var/run/firewall.pid
+# config: /etc/rc.d/rc.firewall
+# probe: true
+
+# ----------------------------------------------------------------------------
+# v02/09/02
+#
+# Part of the copyrighted and trademarked TrinityOS document.
+# http://www.ecst.csuchico.edu/~dranch
+#
+# Written and Maintained by David A. Ranch
+# dranch@trinnet.net
+#
+# Updates
+# -------
+#
+# ----------------------------------------------------------------------------
+
+
+# Source function library.
+/etc/rc.d/init.d/functions
+
+# Check that networking is up.
+
+# This line no longer work with bash2
+#[ ${NETWORKING} = "no" ] &#38;&#38; exit 0
+# This should be OK. 
+[ "XXXX${NETWORKING}" = "XXXXno" ] &#38;&#38; exit 0
+
+[ -x /sbin/ifconfig ] || exit 0
+
+# The location of various iptables and other shell programs
+#
+#   If your Linux distribution came with a copy of iptables, most
+#   likely it is located in /sbin.  If you manually compiled
+#   iptables, the default location is in /usr/local/sbin
+#
+# ** Please use the "whereis iptables" command to figure out
+# ** where your copy is and change the path below to reflect
+# ** your setup
+#
+#IPTABLES=/usr/local/sbin/iptables
+#######  PAUL MODIFIED ###########
+IPTABLES=/sbin/iptables
+
+# See how we were called.
+case "$1" in
+  start)
+    /etc/rc.d/rc.firewall-2.4.drop
+    ;;
+
+  stop)
+    echo -e "\nFlushing firewall and setting default policies to DROP\n"
+    $IPTABLES -P INPUT DROP
+    $IPTABLES -F INPUT
+    $IPTABLES -P OUTPUT DROP
+    $IPTABLES -F OUTPUT
+    $IPTABLES -P FORWARD DROP
+    $IPTABLES -F FORWARD
+    $IPTABLES -F -t nat
+
+    # Delete all User-specified chains
+    $IPTABLES -X
+    #
+    # Reset all IPTABLES counters
+    $IPTABLES -Z
+    ;;
+
+  restart)
+        $0 stop
+        $0 start
+        ;;
+
+  status)
+        $IPTABLES -L
+        ;;
+
+  mlist)
+    cat /proc/net/ip_conntrack
+    ;;
+
+  *)
+        echo "Usage: firewall-2.4 {start|stop|status|mlist}"
+        exit 1
+esac
+
+
+
+echo -e "\nDone.\n"
+
+snip..............................................
+
+
+The above firewall default policy is DROP all inbound from
+Internet to the server and DROP all outbound from server to
+Internet. In order to allow inbound and outbounds, we need to 
+specifically write rules to allow it. The nat routing rules
+(FORWARD) remains the same - i.e. default is DROP all forwarding,
+except those specifically stated rulesets. 
+
+
+
+
+
+Rule Precedence
+---------------
+If you did this:
+
+	iptables -A INPUT -s 23.34.45.66 -j DROP
+
+it appends to the input chain.  So if you have 10 rules and rule 9 says that
+connections to port 80 = accepted and rule 10 is the block rule, it will never
+be reached. You need to insert it as 1st rule.
+
+
+	iptables -I INPUT 1 -s 23.34.45.66
+
+See man iptables.
+
+
+
+
+
+Blocking ICQ
+------------
+
+
+###################### ICQ #######################
+
+# Block ICQ
+$IPTABLES -A FORWARD -p tcp --dport 5190  -j DROP   
+
+# Block go.icq.com 
+$IPTABLES -A FORWARD  -d 205.188.248.0/24  -j DROP    
+$IPTABLES -A FORWARD  -d 64.12.164.0/24  -j DROP   
+$IPTABLES -A FORWARD  -d 205.188.213.0/24  -j DROP   
+
+
+The port 5190 is the standard port for application based ICQ-Lite and 
+ICQ Pro 200.
+
+The site go.icq.com is the web-based icq which listens on port 80.
+Since we cannot block 80, we block the site.
+
+
+
+
+
+REFERENCES
+----------
+Ziegler, R.L.(2002). Linux Firewalls (2nd ed). New Riders.

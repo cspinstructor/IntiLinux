@@ -1,0 +1,46 @@
+REVISION CONTROL SYSTEM (RCS)
+=============================
+
+Objective
+---------
+Using rcs to manage programming.
+
+
+
+Creating and using RCS
+----------------------
+
+mkdir RCS in current directory.
+ci hello.c
+
+adds hello.c into database.
+
+co hello.c checks it out for read only.
+
+co -l hello.c allows it to be edited.
+
+vim hello.c, do the editing and:
+
+ci hello.c again
+
+
+It saves as revision 1.1 and autoupdates the level
+number each time you ci.
+
+1.1    1 is release number   .1 is level number.
+
+To co previous releases:
+
+co -l -r1.1 hello.c
+
+vim hello.c, do editing and:
+
+ci -l hello.c
+
+
+To remove entire RCS:
+
+	rm -fr RCS
+
+
+rcsclean simply rm -f hello.c that was checked out.

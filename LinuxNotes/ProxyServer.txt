@@ -1,0 +1,717 @@
+Proxy Server
+============
+
+Objective
+---------
+To set up a system of extended transparent proxying using a 
+combination of iptables firewall - squid - dansguardian for
+the purpose of content filtering of web surfing.
+
+
+Caching proxy servers
+----------------------
+Proxy servers are application layer programs that fetch the web
+pages for and on behalf of the LAN web users. It differs from
+the firewall in that the firewall is a port and IP header filter.
+A firewall filters a packet based on port number, IP address,
+MAC address, TCP flags and connection states. As such a firewall
+does not read the content of the IP packets and as such is incapable
+of filtering a packet based on content.  
+
+In order to filter based on content, we need to use a content 
+filtering proxy (eg, DansGuardian) that works in conjunction with
+another caching proxy (eg, Squid).
+
+Two common types of caching proxy servers are Apache and Squid.
+Apache was not designed to be a proxy server but the proxy
+capability was later added to it. Squid was designed and built
+as a proxy server from the ground up. Both Squid and Apache comes
+with Linux. We will use squid.
+
+The configuration file is:
+	
+	/etc/squid/squid.conf
+
+The variables that should be set are:
+
+	# TAG: acl
+	# Defining access list
+	acl Unix src 192.168.0.0/24
+	# where Unix is the host that runs squid.
+
+	# TAG: http_access
+	# INSERT YOUR OWN RULES HERE
+	http_access allow Unix 
+
+	# TAG: httpd_accel_uses_host_header   on|off
+        httpd_accel_host virtual
+	httpd_accel_port 80
+	httpd_accel_with_proxy on
+	httpd_accel_uses_host_header on
+
+
+To start or stop squid, or find the status:
+
+   /etc/rc.d/init.d/squid start|restart|stop|status
+
+where start, restart, stop or status are the parameters you
+pass to the squid script.
+
+
+Content filtering proxy
+-----------------------
+The content filtering proxy called DansGuardian available from:
+
+	http://www.dansguardian.org
+
+Download the rpm:
+
+	DansGuardian-2.4.5-2.RH72.i386.rpm
+
+and install it while login as root:
+
+	rpm -ivh DansGuardian-2.4.5-2.RH72.i386.rpm
+
+or 
+	rpm -Uvh DansGuardian-2.4.5-2.RH72.i386.rpm
+
+if you are upgrading from an earlier version.
+
+
+The latest rpm is:
+
+	DansGuardian-2.5.3-3.i386.rpm
+
+
+DansGuardian has  the following dependency:
+
+	libstdc++-libc6.2-2.so.3
+
+which is in this rpm:
+
+	compat-libstdc++-7.3-2.96.110.i386.rpm
+
+
+The configuration file is:
+
+	/etc/dansguardian/dansguardian.conf
+
+The only variables to set are:
+
+ filterport = 8080
+ proxyip = 192.168.0.1 
+ proxyport = 3128
+ accessdeniedaddress =  'http://192.168.0.1/cgi-bin/dansguardian.pl'
+
+Squid listens on port 3128 and is known as "squid" service
+whilst dansguardian listens on port 8080 and is known as
+"webcache" service.  Squid must be started before you
+can start dansguardian. 
+
+The "proxyip" variable is the host that squid and dansguardian
+runs on. 
+
+The "accessdeniedaddress" variable is the location of the script 
+which will generate the webpage to be sent to those
+clients who requested a banned web page.
+
+The firewall will receive all web requests received on port 80 and
+redirect them all to squid which listens on port 8080. Squid will
+send to dansguardian which listens on port 3128 which will filter the 
+URL and fetch the web pages. When the remote web server sends the
+webpages, its contents will be filtered by dansguardian. Dansguardian
+then sends the web-pages to squid for caching and onward transmission
+to the client host who requested the webpage.
+
+Dansguardian consults the files in this directory: 
+
+	/etc/dansguardian
+
+for the filtering rules. If a webpage is banned, dansguardian will
+send a notice to the requesting web client to inform that the page
+is banned or restricted.
+
+Fig A shows the architecture for outgoing web packets:
+
+				      4
+			   .----------------------------.	
+			   |		    	        |	
+		    1	   V	 2	          3	|
+	web client ---> firewall --> dansguardian --> squid
+			   |
+			   | 5
+			   V
+			Internet				
+			
+
+      		Fig A. Outgoing web packets
+                ---------------------------
+
+
+[1] The web client, eg, Netscape Navigator, sends requests for a 
+    web page, the firewall checks the destination port. If it is
+    for a web server (ie port 80),
+
+[2] it redirects the packet to the webcache dansguardian (port 8080). 
+    Dansguardian checks the rules whether or not the URL should 
+    be blocked, then the request is
+
+[3] sent to squid (port 3128). 
+
+[4] Squid uses the firewall's NAT
+
+[5] to connect to the web server on the Internet. 
+	
+	
+Fig. B below shows the path returning web packets take.
+
+				     7
+			   .---------------------------.	
+			   |		    	       |	
+		    10	   | 	  9	            8  V 			
+	web client <--- firewall <-- dansguardian <-- squid
+			   ^
+			   |  
+			   | 6
+			Internet				
+
+		Fig B. Incoming web packets
+		---------------------------
+
+[6] Once the web page arrives from the Internet, it will go to the
+    firewall 
+
+[7] who will direct it to squid, since it was squid who requested 
+    the web page.  
+
+[8] Squid passes it to Dansguardian will filter the contents
+    of the web page by consulting its filtering rules. If it is OK,
+
+[9] it will forward it to the firewall 
+
+[10] who will route it to the web client.	
+
+
+To start, stop dansguardian, or find out if it is running:
+
+  /etc/rc.d/init.d/dansguardian start|restart|stop|status
+
+where start, restart, stop or status are the parameters you
+pass to the dansguardian script.
+
+
+The Firewall
+------------
+The firewall should be as follows:
+
+
+----------------------------------------------------------------
+#!/bin/sh
+
+echo -e "\n\nLoading simple rc.firewall ..\n"
+
+
+# The location of the 'iptables' program
+IPTABLES=/sbin/iptables
+
+
+#Setting the EXTERNAL and INTERNAL interfaces for the network
+EXTIF="ppp0"
+INTIF="eth0"
+
+echo "   External Interface:  $EXTIF"
+echo "   Internal Interface:  $INTIF"
+
+
+
+echo -en "   loading modules: "
+
+# Need to verify that all modules have all required dependencies
+echo "  - Verifying that all kernel modules are ok"
+/sbin/depmod -a
+
+echo -en "ip_tables, "
+/sbin/insmod ip_tables
+
+
+#Load the IPTABLES filtering module - "iptable_filter" 
+#  - Loaded automatically when filter policies are activated
+
+
+#Load the stateful connection tracking framework - "ip_conntrack"
+echo -en "ip_conntrack, "
+/sbin/insmod ip_conntrack
+
+
+#Load the FTP tracking mechanism for full FTP tracking
+echo -en "ip_conntrack_ftp, "
+/sbin/insmod ip_conntrack_ftp
+
+
+#Load the IRC tracking mechanism for full IRC tracking
+echo -en "ip_conntrack_irc, "
+/sbin/insmod ip_conntrack_irc
+
+
+#Load the general IPTABLES NAT code - "iptable_nat"
+echo -en "iptable_nat, "
+/sbin/insmod iptable_nat
+
+
+#Loads the FTP NAT functionality into the core IPTABLES code
+echo -en "ip_nat_ftp, "
+/sbin/insmod ip_nat_ftp
+
+echo ".  Done loading modules."
+
+echo "   enabling forwarding.."
+echo "1" > /proc/sys/net/ipv4/ip_forward
+
+
+# Dynamic IP users:
+echo "   enabling DynamicAddr.."
+echo "1" > /proc/sys/net/ipv4/ip_dynaddr
+
+
+#  Unless specified, the defaults for INPUT and OUTPUT is ACCEPT
+#    The default for FORWARD is DROP
+#
+echo "   clearing any existing rules and setting default policy.."
+$IPTABLES -P INPUT ACCEPT 
+$IPTABLES -F INPUT 
+$IPTABLES -P OUTPUT ACCEPT
+$IPTABLES -F OUTPUT 
+$IPTABLES -P FORWARD DROP 
+$IPTABLES -F FORWARD 
+$IPTABLES -t nat -F
+
+
+# redirect to dansguardian-squid for content filtering
+# to enable uncensored surfing, just comment it out and restart 
+# the firewall
+# global filter:
+
+#$IPTABLES -t nat -A PREROUTING -p tcp --dport 80 \
+# -j REDIRECT --to-port 8080 
+
+# filter only machine 192.168.0.4
+$IPTABLES -t nat -A PREROUTING -s 192.168.0.4 -p tcp --dport 80 \
+ -j REDIRECT --to-port 8080 
+
+
+
+
+# Choose this:
+#$IPTABLES -A FORWARD -i $EXTIF -o $INTIF \
+# -m state --state ESTABLISHED,RELATED -j ACCEPT
+# OR, this:
+#$IPTABLES -A FORWARD -i $EXTIF -o $INTIF -j ACCEPT #Allow all inbound
+
+
+# Choose these:
+# ( IP-MAC based filter -> vicious! )
+$IPTABLES -A FORWARD -i $INTIF -o $EXTIF \
+-s 192.168.0.11 -m mac --mac-source 00:00:E8:E3:B1:5C -j ACCEPT
+$IPTABLES -A FORWARD -i $INTIF -o $EXTIF \
+-s 192.168.0.1 -m mac --mac-source 00:00:E8:E3:B1:5C -j ACCEPT
+
+# or, this ( allow all out )
+$IPTABLES -A FORWARD -i $INTIF -o $EXTIF \
+-s 192.168.0.3  -j ACCEPT
+
+# Logging can fill up your /etc/var/messages file very quickly
+#$IPTABLES -A FORWARD -j LOG
+
+
+echo "   Enabling SNAT (MASQUERADE) functionality on $EXTIF"
+$IPTABLES -t nat -A POSTROUTING -o $EXTIF -j MASQUERADE
+
+
+echo -e "\nDone.\n"
+--------------------------------------------------------------------------
+
+To start, stop, restart the firewall:
+
+/etc/rc.d/init.d/firewall-2.4 [start|stop|restart]
+
+
+
+A Default Drop Firewall
+-----------------------
+The above firewall is a default accept firewall and is very liberal as it
+allows all input by default and drops secific packets.
+
+The firewall described below is just the opposite, the policy is default drop,
+unless specifically accepted.
+
+It consists of 2 scripts:
+
+	/etc/rc.d/init.d/firewall.dansguardian
+	/etc/rc.d/rc.firewall.dansguardian
+
+The firewall.dansguardian calls the rc.firewall.dansguardian script as
+follows:
+
+  /etc/rc.d/init.d/firewall.dansguardian [start|stop|restart|mlist|status]
+
+
+Both scripts are reproduced below heavily commented.
+
+
+#############################
+#   firewall.dansguardian   #
+#############################
+#!/bin/sh
+#
+# chkconfig: 2345 11 89
+#
+# description: Loads the rc.firewall-2.4 ruleset.
+#
+# processname: firewall-2.4
+# pidfile: /var/run/firewall.pid
+# config: /etc/rc.d/rc.firewall
+# probe: true
+
+# ----------------------------------------------------------------------------
+# v02/09/02
+#
+# Part of the copyrighted and trademarked TrinityOS document.
+# http://www.ecst.csuchico.edu/~dranch
+#
+# Written and Maintained by David A. Ranch
+# dranch@trinnet.net
+#
+# Updates
+# -------
+#
+# ----------------------------------------------------------------------------
+
+
+# Source function library.
+/etc/rc.d/init.d/functions
+
+# Check that networking is up.
+
+# This line no longer work with bash2
+#[ ${NETWORKING} = "no" ] &#38;&#38; exit 0
+# This should be OK. 
+[ "XXXX${NETWORKING}" = "XXXXno" ] &#38;&#38; exit 0
+
+[ -x /sbin/ifconfig ] || exit 0
+
+# The location of various iptables and other shell programs
+#
+#   If your Linux distribution came with a copy of iptables, most
+#   likely it is located in /sbin.  If you manually compiled
+#   iptables, the default location is in /usr/local/sbin
+#
+# ** Please use the "whereis iptables" command to figure out
+# ** where your copy is and change the path below to reflect
+# ** your setup
+#
+#IPTABLES=/usr/local/sbin/iptables
+#######  PAUL MODIFIED ###########
+IPTABLES=/sbin/iptables
+
+# See how we were called.
+case "$1" in
+  start)
+    /etc/rc.d/rc.firewall-2.4.drop
+    #/etc/rc.d/rc.firewall-2.4.orig
+    ;;
+
+  stop)
+    echo -e "\nFlushing firewall and setting default policies to DROP\n"
+    $IPTABLES -P INPUT DROP
+    $IPTABLES -F INPUT
+    $IPTABLES -P OUTPUT DROP
+    $IPTABLES -F OUTPUT
+    $IPTABLES -P FORWARD DROP
+    $IPTABLES -F FORWARD
+    $IPTABLES -F -t nat
+
+    # Delete all User-specified chains
+    $IPTABLES -X
+    #
+    # Reset all IPTABLES counters
+    $IPTABLES -Z
+    ;;
+
+  restart)
+        $0 stop
+        $0 start
+        ;;
+
+  status)
+        $IPTABLES -L
+        ;;
+
+  mlist)
+    cat /proc/net/ip_conntrack
+    ;;
+
+  *)
+        echo "Usage: firewall-2.4 {start|stop|status|mlist}"
+        exit 1
+esac
+
+echo -e "\nDone.\n"
+
+
+
+
+
+
+##############################
+#  rc.firewall.dansguardian  #
+##############################
+#!/bin/sh
+# for dhcp server based -  ie filtering based on mac addresses only
+# can use for non-dhcp as well
+# Added VNC 30th March, 2003
+# Changed policy to DROP by default after getting hacked from
+# a Taiwanese hacker - 28th April, 2003
+# Added Dansguardian - 29th June, 2003
+echo -e "\n\nLoading rc.firewall ..\n"
+
+IPTABLES=/sbin/iptables
+
+#Setting the EXTERNAL and INTERNAL interfaces for the network
+# eth0 is 3c509 for LAN
+# eth1 is Accton ne2k-pci for ADSL
+EXTIF="ppp0" #on eth1
+INTIF="eth0"
+
+# Need to verify that all modules have all required dependencies
+/sbin/depmod -a
+
+# Loading Modules
+/sbin/insmod ip_tables
+
+#  Loading stateful tracking 
+/sbin/insmod ip_conntrack
+
+#Load the FTP tracking mechanism for full FTP tracking
+/sbin/insmod ip_conntrack_ftp
+
+#Load the IRC tracking mechanism for full IRC tracking
+/sbin/insmod ip_conntrack_irc
+
+#Load the general IPTABLES NAT code - "iptable_nat"
+/sbin/insmod iptable_nat
+
+#Loads the FTP NAT functionality into the core IPTABLES code
+/sbin/insmod ip_nat_ftp
+
+# enabling forwarding
+echo "1" > /proc/sys/net/ipv4/ip_forward
+
+# Dynamic IP users:
+echo "1" > /proc/sys/net/ipv4/ip_dynaddr
+
+
+
+
+# redirect to dansguardian-squid for content filtering
+# to enable uncensored surfing, just comment it out and restart 
+# the firewall
+#$IPTABLES -t nat -A PREROUTING -p tcp --dport 80 \
+# -j REDIRECT --to-port 8080 
+$IPTABLES -t nat -A PREROUTING -s 192.168.0.2 -p tcp --dport 80 \
+ -j REDIRECT --to-port 8080 
+
+
+# If you just did these:
+#	$IPTABLES -P INPUT ACCEPT
+#	$IPTABLES -F INPUT 
+#	$IPTABLES -P OUTPUT ACCEPT
+#	$IPTABLES -F OUTPUT 
+# it would become a firewall with policy of default access.
+
+
+# I found these to work as well:
+#	$IPTABLES -P OUTPUT ACCEPT
+#	$IPTABLES -F OUTPUT 
+#
+#	with:
+#
+#	$IPTABLES -A INPUT -j ACCEPT 
+# or
+#	$IPTABLES -A INPUT -p tcp  -j ACCEPT
+#	$IPTABLES -A INPUT -p udp  -j ACCEPT
+# or
+#	$IPTABLES -A INPUT -i $EXTIF -p tcp \
+#	  	  -m state --state ESTABLISHED,RELATED -j ACCEPT
+#	$IPTABLES -A INPUT -i lo  -p tcp  -j ACCEPT
+#	$IPTABLES -A INPUT -p udp  -j ACCEPT
+# Note that in all the above, we set the policy of OUTPUT to accept and just
+# control the INPUT.
+
+
+# The most secure is to control both the INPUT and OUTPUT as follows:
+$IPTABLES -A INPUT -i $EXTIF -p tcp --dport 3128 \
+	  -m state --state ESTABLISHED,RELATED -j ACCEPT
+$IPTABLES -A INPUT -i lo  -p tcp  -j ACCEPT
+$IPTABLES -A INPUT -p udp  -j ACCEPT
+$IPTABLES -A INPUT -i $EXTIF -p tcp --sport 80 \
+	  -m state --state ESTABLISHED,RELATED -j ACCEPT
+
+$IPTABLES -A OUTPUT -o lo  -p tcp  -j ACCEPT
+$IPTABLES -A OUTPUT -p udp  -j ACCEPT
+$IPTABLES -A OUTPUT -o $EXTIF -p tcp --dport 80 \
+	  -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT	
+
+
+
+
+#####################################################
+#	        V     N     C                       #
+#####################################################
+# Uncomment below to allow all  inbound access to VNC server
+#$IPTABLES -t nat -A PREROUTING -i $EXTIF -p tcp --dport 5900 \
+# -j DNAT --to-destination 192.168.0.3:5900 
+
+
+# From streamyx:  219.92.0.0 to 219.95.0.0 
+#$IPTABLES -t nat -A PREROUTING -i $EXTIF \
+#          -s 219.92.0.0/16 -p tcp --dport 5900 \
+#          -j DNAT --to-destination 192.168.0.3:5900 
+#$IPTABLES -t nat -A PREROUTING -i $EXTIF \
+#          -s 219.93.0.0/16 -p tcp --dport 5900 \
+#          -j DNAT --to-destination 192.168.0.3:5900 
+#$IPTABLES -t nat -A PREROUTING -i $EXTIF \
+#          -s 219.94.0.0/16 -p tcp --dport 5900 \
+#          -j DNAT --to-destination 192.168.0.3:5900 
+#$IPTABLES -t nat -A PREROUTING -i $EXTIF \
+#          -s 219.95.0.0/16 -p tcp --dport 5900 \
+#          -j DNAT --to-destination 192.168.0.3:5900 
+#  From iicpen
+#$IPTABLES -t nat -A PREROUTING -i $EXTIF \
+#          -s 202.186.197.169  \
+#          -p tcp --dport 5900 \
+#          -j DNAT --to-destination 192.168.0.3:5900 
+
+
+#####################################################
+#	      W  E   B   C   A   M                  #
+#####################################################
+# Allow all inbound acess to Webcam
+$IPTABLES -t nat -A PREROUTING -i $EXTIF \
+          -p tcp --dport 3333 \
+          -j DNAT --to-destination 192.168.0.4:3333 
+
+# Allow LAN access to server
+$IPTABLES -A INPUT -i $INTIF -s 192.168.0.0/24 -j ACCEPT 
+$IPTABLES -A OUTPUT -o $INTIF -d 192.168.0.0/24 -j ACCEPT 
+
+# Allow iicpen.intipen.edu.my access to server
+$IPTABLES -A INPUT -i $EXTIF -s 202.186.197.169 -j ACCEPT 
+$IPTABLES -A OUTPUT -o $EXTIF -d 202.186.197.169 -j ACCEPT 
+$IPTABLES -A INPUT -i $EXTIF -s 202.186.197.139 -j ACCEPT 
+$IPTABLES -A OUTPUT -o $EXTIF -d 202.186.197.139 -j ACCEPT 
+
+
+# Adrian  
+$IPTABLES -A FORWARD -i $INTIF -o $EXTIF -s 192.168.0.4 -j ACCEPT  
+
+# FreeBSD  
+$IPTABLES -A FORWARD -i $INTIF -o $EXTIF -s 192.168.0.6 -j ACCEPT  
+
+
+# Annie
+#$IPTABLES -A FORWARD -i $INTIF -o $EXTIF \
+# -s 192.168.0.25 -m mac --mac-source 00:08:A1:19:90:4A  -j ACCEPT 
+$IPTABLES -A FORWARD -i $INTIF -o $EXTIF \
+ -m mac --mac-source 00:08:A1:19:90:4A  -j ACCEPT 
+
+# Notebook
+$IPTABLES -A FORWARD -i $INTIF -o $EXTIF \
+ -m mac --mac-source 00:E0:98:99:7A:B0 -j ACCEPT 
+
+# Must have this line, or you can't get anything in
+# from the Internet, eg, web pages 
+$IPTABLES -A FORWARD -i $EXTIF -o $INTIF -j ACCEPT
+
+# Enabling SNAT (MASQUERADE) functionality on $EXTIF"
+$IPTABLES -t nat -A POSTROUTING -o $EXTIF -j MASQUERADE
+
+
+
+
+
+Discussion
+----------
+Below are the dansguardian parts extracted from above:
+It consists of 3 parts heavily commented:
+
+[ The REDIRECT part ]
+The packet is redirected to the local host (ie, the loopback interface)
+irrespective of the packet's destination address:
+
+	$IPTABLES -t nat -A PREROUTING -p tcp --dport 80 \
+ 		  -j REDIRECT --to-port 8080 
+or
+	$IPTABLES -t nat -A PREROUTING -s 192.168.0.2 -p tcp --dport 80 \
+ 		  -j REDIRECT --to-port 8080 
+
+
+[ The INPUT chain ]
+
+
+This is necessary because when dansguardian (port 8080) connects to squid,
+it connects to the loopback address:
+
+	$IPTABLES -A INPUT -i lo  -p tcp  -j ACCEPT
+
+I haven't figured out why this is necessary, but i suspect it may have
+something to do with DNS:
+
+	$IPTABLES -A INPUT -p udp  -j ACCEPT
+
+Note that, it is squid (port 3128) which actually makes all the requests
+to the remote webserver. When doing so, it spawns a high port num
+for each connection. That is why we need to capture the sport of the incoming
+packets and allow it access. We could not catch the dport, because it would be
+a high-numbered random port by squid. Remember, that squid is a client, that
+is why is spawns a high-numbered port to connect to a web-server.
+Note that m-state should not have NEW, so that no outsiders can come in unless
+the connection originated from within:
+
+	$IPTABLES -A INPUT -i $EXTIF -p tcp --sport 80 \
+	  	  -m state --state ESTABLISHED,RELATED -j ACCEPT
+
+
+
+
+[ The OUTPUT chain ]
+
+This is necessary because when dansguardian (port 8080) connects to squid,
+it connects to the loopback address:
+
+	$IPTABLES -A OUTPUT -o lo  -p tcp  -j ACCEPT
+
+I haven't figured out why this is necessary, but i suspect it may have
+something to do with DNS:
+
+	$IPTABLES -A OUTPUT -p udp  -j ACCEPT
+
+Note that, it is squid (port 3128) which actually makes all the requests
+to the remote webserver. When doing so, it spawns a high port num
+for each connection. That is why we need to capture the sport of the incoming
+packets and allow it access. We could not catch the dport, because it would be
+a high-numbered random port by squid. Remember, that squid is a client, that
+is why is spawns a high-numbered port to connect to a web-server.
+Note that the m-state should include NEW or else squid won't be able to get
+anything out.
+
+	$IPTABLES -A OUTPUT -o $EXTIF -p tcp --dport 80 \
+	  	  -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT	
+
+
+Combining MAC filtering and DansGuardian
+----------------------------------------
+
+A combination of MAC filtering and DansGuardian:
+
+$IPTABLES -t nat -A PREROUTING  -m mac --mac-source 00:08:A1:19:90:4A  -p tcp --dport 80 \
+  -j REDIRECT --to-port 8080 

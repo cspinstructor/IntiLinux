@@ -1,0 +1,150 @@
+HP LaserJet 5N
+==============
+
+Objective
+---------
+To setup a network printer HP LaserJet 5N.
+
+
+
+
+Architecture
+------------
+The network architecture is as shown below:
+
+
+		 intelpro100
+HPLaserJet 5N -- print server -- LAN -- RedHat 8 Linux 
+
+
+		Fig A. HP LaserJet to Linux
+		---------------------------
+
+
+
+Finding the name and share
+--------------------------
+To find out the name of the print server, assuming you know the IP:
+
+	nmblookup -A 192.168.1.16
+
+Once you get the name:
+
+	intelpro100
+
+Enumerate the share as follows:
+
+
+	smbclient -L //intelpro100  -I 192.168.1.16
+
+
+
+You will get the following output:
+
+	Sharename      Type      Comment
+	---------      ----      -------
+	HP5N           Printer   HP5N
+	HP6L           Printer   HP6L
+	INTELCOM       Printer   NetportExpress(tm) PRO/100 Serial Port
+	IPC$           IPC       
+
+
+
+Select HP6L as the share (Note Linux has no filter/driver for HP5N).
+HP6L is also the queue name.
+
+Then fire up the print configuration as follows:
+
+	printtool
+
+You will get a GUI as shown in Fig B below:
+
+	------------------------------------------------
+	| Red Hat Printer Config			|
+	|-----------------------------------------------|
+	| File	Test	Help				|
+	|-----------------------------------------------|
+	| New Edit Delete Default Apply			|
+	|-----------------------------------------------|
+	| Queue	AliasList  QueueType  Details		|
+	|-----------------------------------------------|
+	|						|
+	|						|
+	|						|
+	|						|
+	|						|
+	|						|
+	|						|
+	|						|
+	|						|
+	|						|
+	|_______________________________________________|
+
+		Fig B.  Printtool GUI
+		---------------------
+
+
+Click on New, and you will get a wizard which runs you through the
+setup process. The first dialog is "Set the Print Queue name & type".
+Set as follows:
+
+	Queue Name:  hp6l
+	Queue Type:  Unix Printer  LPD
+
+
+Click on Forward and you will get the second dialog called
+"Configure a Unix Print Queue"
+Set as follows:
+
+	Server: 192.168.1.16
+	Queue: hp6l
+
+Don not check the Strict RFC1179 Compiance check box.
+Click Forward and you will come to the dialog called
+"Select a Print Driver". Scroll down to HP. Expand the
+HP tree by clicking on it and scroll down to:
+
+	LaserJet 6L
+
+Expand the LaserJet 6L tree by clicking on it and then select:
+
+	ljet4 (*)
+
+Then click forward and you will come to the dialog called
+"finish, and Create the New Print Queue". Click Apply and you
+will get the final output in Fig. C below . Click Apply
+and it will restart the lpd server to reread the new configuration.
+
+	------------------------------------------------
+	| Red Hat Printer Config			|
+	|-----------------------------------------------|
+	| File	Test	Help				|
+	|-----------------------------------------------|
+	| New Edit Delete Default Apply			|
+	|-----------------------------------------------|
+	| Queue	AliasList  QueueType  Details		|
+	|-----------------------------------------------|
+	| hp6l             LPD        hp6l@192.168.1.16 |		|
+	|						|
+	|						|
+	|						|
+	|						|
+	|						|
+	|						|
+	|						|
+	|						|
+	|						|
+	|_______________________________________________|
+
+		Fig C.  Printtool GUI - setup completed
+		---------------------------------------
+
+
+
+Alternative Method
+------------------
+An alternative method is described in the chapter Samba.txt
+
+
+
+

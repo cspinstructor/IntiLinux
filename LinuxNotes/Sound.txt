@@ -1,0 +1,33 @@
+
+SOUND RECORDING
+===============
+
+To record sounds using command line,
+plug in a microphone into sound card, then
+do this:
+
+
+dd bs=8k count=4 < /dev/audio > sample.wav
+
+
+
+Use kmix to increase mic sensitivity.
+
+
+
+To playback,
+
+	cat sample.wav > /dev/audio
+
+or,
+
+	cat sample.wav > /dev/dsp
+
+
+
+Applications
+------------
+Sound detection using mic to trigger alarm.
+	
+Todo:  Design algorithm to detect alarm
+treshold, or, pattern.

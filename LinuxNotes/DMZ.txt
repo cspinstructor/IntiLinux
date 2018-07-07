@@ -1,0 +1,185 @@
+DMZ 
+====
+
+Objective
+---------
+To set up a firewall with three interfaces that links 3 
+networks as shown in Fig A below:
+
+			Internet
+			   |
+			   |
+	 Office		   |	          Labs
+	192.168.0.x --- Firewall ----- 192.168.1.x	
+
+	   Fig A - Firewall linking 3 networks
+	   -----------------------------------
+
+where the "Office" is the trusted network with network
+address 192.168.0.0 and the "Labs" are the untrusted
+network, also known as the DeMilitarized Zone (DMZ).
+
+Note that in Fig A, the Firewall is also a router and 
+Internet Gateway and may also serve MySQL and act as 
+Intranet Web Server.
+
+Internet
+--------
+Is connected to the Firewall's through the ISDN Terminal
+Adapter.  It could very well be an analog modem, or, even
+an ADSL modem.
+
+The Firewall's interface is known as ppp0 and it's IP address
+is dynamically assigned during dial-up.
+
+
+Office
+------
+The connected to the Firewall through a switch or hub.  Its
+NIC is called eth0, and should have the IP address 192.168.0.1
+whilst all the hosts within the Office will have IP addresses from
+192.168.0.2 to 192.168.0.254. Each hosts within the Office
+should set its default gateway and primary nameserver to 192.168.0.1.
+
+
+Labs
+----
+This is the DMZ and it is also connected to the Firewall through
+a switch or hub.  Its NIC is called eth1, and should have the IP address
+192.168.1.1 whilst all the hosts within the Labs will have IP addresses
+from 192.168.1.2 to 192.168.1.254.  Each host within the Office
+should set its default gateway and primary nameserver to 192.168.1.1.
+
+
+
+Firewall Script
+---------------
+The firewall script is shown below:
+
+...........................................................
+
+#!/bin/sh
+# rc.firewall-2.4 for ccc
+
+echo -e "\n\nLoading rc.firewall for ccc..\n"
+
+
+IPTABLES=/sbin/iptables
+
+#Setting the EXTERNAL and INTERNAL interfaces for the network
+# eth0 is 3c509 for LAN
+# eth1 is Accton ne2k-pci for ADSL
+EXTIF="ppp0" #on eth1
+INTIF="eth0"
+DMZIF="eth1"
+
+echo "   External Interface:  $EXTIF"
+echo "   Internal Interface:  $INTIF"
+echo "   DMZ Interface:  $DMZIF"
+
+
+echo -en "   loading modules: "
+
+# Need to verify that all modules have all required dependencies
+#
+echo "  - Verifying that all kernel modules are ok"
+/sbin/depmod -a
+
+# Loading Modules
+echo -en "ip_tables, "
+/sbin/insmod ip_tables
+
+
+#  Loading stateful tracking 
+#
+echo -en "ip_conntrack, "
+/sbin/insmod ip_conntrack
+
+
+#Load the FTP tracking mechanism for full FTP tracking
+echo -en "ip_conntrack_ftp, "
+/sbin/insmod ip_conntrack_ftp
+
+
+#Load the IRC tracking mechanism for full IRC tracking
+echo -en "ip_conntrack_irc, "
+/sbin/insmod ip_conntrack_irc
+
+
+#Load the general IPTABLES NAT code - "iptable_nat"
+echo -en "iptable_nat, "
+/sbin/insmod iptable_nat
+
+
+#Loads the FTP NAT functionality into the core IPTABLES code
+echo -en "ip_nat_ftp, "
+/sbin/insmod ip_nat_ftp
+
+
+cho ".  Done loading modules."
+
+
+echo "   enabling forwarding.."
+echo "1" > /proc/sys/net/ipv4/ip_forward
+
+
+# Dynamic IP users:
+echo "   enabling DynamicAddr.."
+echo "1" > /proc/sys/net/ipv4/ip_dynaddr
+
+
+# Policy
+echo "   clearing any existing rules and setting default policy.."
+$IPTABLES -P INPUT ACCEPT
+$IPTABLES -F INPUT 
+$IPTABLES -P OUTPUT ACCEPT
+$IPTABLES -F OUTPUT 
+$IPTABLES -P FORWARD DROP
+$IPTABLES -F FORWARD 
+$IPTABLES -t nat -F
+
+
+#Block these hackers
+$IPTABLES -A INPUT -i $EXTIF -s 19.93.221.107 -j DROP 
+#$IPTABLES -A INPUT -j LOG 
+
+# redirect to dansguardian-squid for content filtering
+# to censor surfing, uncomment this line and restart firewall
+#$IPTABLES -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 8080 
+
+
+# Don't allow your kid to access Internet 
+$IPTABLES -A FORWARD -i $INTIF -o $EXTIF -s 192.168.0.4 -j DROP 
+
+# EXT <--> INT 
+$IPTABLES -A FORWARD -i $EXTIF -o $INTIF -j ACCEPT
+$IPTABLES -A FORWARD -i $INTIF -o $EXTIF -j ACCEPT
+#$IPTABLES -A FORWARD -j LOG
+
+# EXT <--> DMZ  
+$IPTABLES -A FORWARD -i $EXTIF -o $DMZIF -j ACCEPT
+$IPTABLES -A FORWARD -i $DMZIF -o $EXTIF -j ACCEPT
+
+
+# INT <--> DMZ 
+$IPTABLES -A FORWARD -i $INTIF -o $DMZIF -j ACCEPT
+$IPTABLES -A FORWARD -i $DMZIF -o $INTIF -j ACCEPT
+
+
+echo "   Enabling SNAT (MASQUERADE) functionality on $EXTIF"
+$IPTABLES -t nat -A POSTROUTING -o $EXTIF -j MASQUERADE
+
+echo -e "\nDone.\n"
+
+.............................................................
+
+
+ Note that the DMZ is the untrusted network and both the
+DMZ and the Office network accesses the internet. But because
+the DMZ and the Office uses different network addresses, they
+need the router to forward the packets from one network to 
+the other. Note that if an intruder in the DMZ deliberately
+changes his IP to the same network as the Office, still he
+can't access the Office because a router cannot forward 
+packets from a host to another host where both are in the
+same network (ie having the same network address).

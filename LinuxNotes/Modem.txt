@@ -1,0 +1,149 @@
+MODEMS
+======
+
+Objective
+---------
+To setup an analog telephone modem and configure it to dial up
+an Internet Service Provider 
+
+
+Installing a modem
+-------------------
+First check to see which serial device is installed:
+
+At the shell type:
+
+	setserial -g /dev/ttyS* | less
+
+or
+	setserial -a /dev/ttyS* | less
+
+for more verbose output.
+
+There will be a long list of devices ttyS0 - ttyS9, but
+the top two might be:
+
+	/dev/ttyS0, UART: 16550A, Port: 0x03f8, IRQ: 4
+	/dev/ttyS1, UART: 16550A, Port: 0x02f8, IRQ: 3
+
+How do we know which one is the modem? Type this:
+
+	ls -l /dev/modem*
+
+If you get:
+
+	lrwxrwxrwx ............ /dev/modem1 -> /dev/ttyS0
+
+then you know that the modem is :
+
+	/dev/ttyS0
+
+
+Alternatively, you could check /etc/sysconfig/hwconf and see
+something like this among other things:
+
+	
+	class: MOUSE
+	bus: SERIAL
+	detached: 0
+	device: ttyS0
+	driver: generic
+	desc: "Generic Serial Mouse"
+	-
+	class: MODEM
+	bus: SERIAL
+	detached: 0
+	device: ttyS1
+	driver: ignore
+	desc: "Generic Serial Modem"
+
+
+
+
+If Modem not installed
+-----------------------
+
+If modem is not installed, then plugin your modem, and
+install it on /dev/ttyS1 if your mouse is installed 
+on /dev/ttyS0. To install, do this:
+
+	ln -s /dev/ttyS1 /dev/modem
+
+This establishes a softlink between /dev/modem and the
+serial device /dev/ttyS1.
+
+To test if it is correctly installed, use minicom program
+to dial a number:
+
+	minicom
+
+Once it starts, type:
+
+	ATDT 1511
+
+Or, any other telephone number.  
+
+
+Setting up Internet dialup account
+----------------------------------
+Once the modem is installed, setup the Internet 
+account by modifying the configuration file:
+
+	/etc/wvdial.conf
+
+as follows:
+
+
+	[Dialer Defaults]
+	Modem = /dev/ttyS1
+	Baud = 57600
+	Init1 = ATZ
+	SetVolume = 0
+	Dial Command = ATDT
+
+	[Dialer Jaring]
+	Username = billgates 
+	Password = mikersof
+	Phone = 1511
+	Inherits = Dialer Defaults
+	Stupid mode = 0
+
+	[Dialer Tmnet]
+	Username = steve 
+	Password = zapple
+	Phone = 1515
+	Inherits = Dialer Defaults
+	Stupid mode = 0
+
+To dial to Jaring, as root, type:
+
+	wvdial Jaring
+
+To dial Tmnet, as root, type:
+
+	wvdial Tmnet
+
+The program wvdial will look for a matching record in wvdial.conf
+and execute the parameters therein.
+
+Another easier way is to run this command;
+
+	wvdialconf /etc/wvdial.conf
+
+This program will autosearch for any installed/connected modem
+and generate a configuration file in /etc/wvdial.conf. You then
+edit this file to insert the Username, Password and phone.
+
+
+ISDN Modem
+----------
+For ISDN Terminal Adapter Modems, it behaves just like a normal
+telephone analog modem. Use wvdialconf, then for the stupid mode,
+set it to 1:
+
+	Stupid mode = 1
+
+The default is 0, which means, after Carrier is detected and the
+1512 number is dialled, it waits for the ISP to send a prompt.
+For ISDN services, there is no prompt, and the dialer should not 
+wait, hence setting stupid mode to 1.

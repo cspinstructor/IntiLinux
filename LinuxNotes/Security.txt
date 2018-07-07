@@ -1,0 +1,734 @@
+SECURITY
+=======
+
+Objective
+--------
+RedHat 7.2 Distribution out of the box is highly insecure.
+This chapter details the steps to make it as secure as 
+possible for a multiuser server environment.
+
+
+Services to start at boot time
+------------------------------
+Use ntsysv to turn off services that are not needed.
+Below is a list of services that may be turned on:
+
+	atd
+	gpm
+	httpd
+	ipchains
+	ipop3
+	iptables
+	keytable	
+	kudzu
+	mysqld
+	netfs
+	network
+	ntalk
+	random
+	rawdevices
+	reconig
+	rhnsd
+	sendmail
+	sshd
+	syslog
+	talk
+	telnet
+	wu-ftpd
+	xfs
+	xinetd
+	
+
+You may add dhcpd, squid and dansguardian quite safely. All others should
+be turned off. Attackers can only come in through services. The fewer ports
+that are opened, the better the security.
+
+On the other hand, too few services means a drop in the usefulness of the 
+server.
+
+
+
+
+
+Starting and Stopping Services 
+------------------------------
+Those servers that can be started manually are found in the directory:
+
+	/etc/rc.d/init.d/
+
+Eg, to start, stop, or restart the Apache web server:
+
+	/etc/rc.d/init.d/httpd start|stop|restart
+
+
+
+Those services not listed in /etc/rc.d/init.d/ maybe started or stopped
+as follows:
+
+
+	chkconfig wu-ftpd on|off
+	chkconfig telnet on|off
+	chkconfig ipop3 on|off
+	
+
+To get a list of all those services that may be started or stopped with
+chkconfig:
+
+	chkconfig --list > chkconfig.txt
+
+
+
+
+Disabling Banners
+-----------------
+
+[Telnet]
+Whenever a successul telnet, ftp or http occurs, the server will dish out
+a sort of welcome banner.  These banners are used by vulnerability scanners
+like nessus to determine the exploit to run against such services. We 
+should therefore disable these banners as shown below.
+
+All modified files should be  backed up as *.bak before modifications.
+
+To remove telnet login banners, edit this file:
+
+	 /etc/issue 
+
+You can substitue the welcome message with a harmless one like this:
+
+	Welcome to Unix
+
+Do the same for this file:
+
+	 /etc/issue.net 
+	
+
+[FTP]
+
+To remove ftp banners edit this file /etc/ftpaccess :
+
+
+snip.....................................................
+
+# This file controls the behavior of the wu-ftpd
+# ftp server.
+#
+# If you're looking for a graphical frontend to
+# editing it, try kwuftpd from the kdeadmin
+# package.
+
+# Don't allow system accounts to log in over ftp
+deny-uid %-99 %65534-
+deny-gid %-99 %65534-
+allow-uid ftp
+allow-gid ftp
+
+# The ftpchroot group doesn't exist by default, this
+# entry is just supplied as an example.
+# To chroot a user, modify the line below or create
+# the ftpchroot group and add the user to it.
+#
+# You will need to setup the required applications
+# and libraries in the root directory (set using
+# guest-root).
+#
+# Look at the anonftp package for the files you'll need.
+guestgroup ftpchroot
+
+# User classes...
+#class   all   real,guest,anonymous  *
+class   real   real *
+
+# Set this to your email address
+#email root@localhost
+email root@society.intipen.edu.my
+
+# Allow 5 mistyped passwords
+loginfails 5
+
+# Notify the users of README files at login and when
+# changing to a different directory
+readme  README*    login
+readme  README*    cwd=*
+
+# Messages displayed to the user
+#message /welcome.msg            login
+#message .message                cwd=*
+greeting terse
+stat brief
+
+# Allow on-the-fly compression and tarring
+compress        yes             all
+tar             yes             all
+
+# Prevent anonymous users (and partially guest users)
+# from executing dangerous commands
+chmod		no		guest,anonymous
+delete		no		anonymous
+overwrite	no		anonymous
+rename		no		anonymous
+
+# Turn on logging to /var/log/xferlog
+log transfers anonymous,guest,real inbound,outbound
+
+# If /etc/shutmsg exists, don't allow logins
+# see ftpshut man page
+shutdown /etc/shutmsg
+
+# Ask users to use their email address as anonymous
+# password
+passwd-check rfc822 warn
+
+snip.....................................................
+
+
+
+Note these parts:
+
+
+	# User classes...
+	#class   all   real,guest,anonymous  *
+	class   real   real *
+
+The above is to disable anonymous logins.
+
+
+	# Messages displayed to the user
+	#message /welcome.msg            login
+	#message .message                cwd=*
+	greeting terse
+	stat brief
+
+
+The greeting is terse and status brief. This way nobody knows what
+ftp version is running, thus, making it difficult for the attacker
+to decide which exploit to use.
+
+
+
+[HTTP]
+
+Edit this file:
+
+	/etc/httpd/conf/httpd.conf
+
+Set this Directive as follows:
+
+	ServerSignature Off
+
+
+
+
+
+
+
+Disable User Shutdown
+---------------------
+
+The commands:
+
+	poweroff, halt, reboot
+
+are all soft links to the command
+
+	consolehelper
+
+To disable user from using this command:
+
+
+	chmod o-x consolehelper
+
+
+
+To disable shutdown command:
+
+
+	chmod o-x shutdown
+
+
+
+
+
+Disable User Mount
+------------------
+
+Take away mount permission:
+
+	chmod o-x mount
+	chmod o-x umount
+
+
+
+Take away eject cdrom and hard disk commands:
+
+	chmod go-x eject
+
+
+
+
+Log Files
+---------
+Monitor the httpd log files:
+
+
+	/var/log/httpd/access_log
+	/var/log/httpd/error_log
+
+
+You will note many attacks, notably buffer overflow attacks by
+nimda and other input parsing error attacks.
+
+
+To see who last logged in:
+
+	last
+
+The list will be quite long, so limit it as follows;
+
+	last -n 20
+
+-n 20 means list the top 20 lines. The most recent logins
+appear on top.
+
+
+System log files is also useful:
+
+	tail -f /var/log/messages
+
+The above will give you realtime monitoring on the system.
+
+
+
+Intrusion Detection
+-------------------
+Use tripwire to detect intrusions. It comes with Redhat 7.2 distribution.
+cd to /etc/tripwire, then edit this file:
+
+	twinstall.sh
+
+by changing the HOST_NAME:
+
+	
+##-------------------------------------------------------
+## Set HOST_NAME variable
+##-------------------------------------------------------
+HOST_NAME='society.intipen.edu.my'
+
+
+Then run the install script:
+
+	./twinstall.sh
+
+
+You will be asked to enter site-key passphrase, then,
+local key passphrase, then, site passphrase.
+
+It will generate the necessary keys and then write the
+configuration to:
+
+	tw.cfg
+	
+and the policy to:
+
+	tw.pol
+
+The tw.pol file is encrypted with your passphrase, but a clear
+text one called twpol.txt is also created so that you may read
+and change the policy if necessary.
+
+Then, you can init the database:
+
+	tripwire --init
+
+Tripwire will create the hash for every system file in the disk according
+to the policies stated in the twpol.txt and ecrypted in tw.pol, referred
+to earlier. The database will be created and stored in:
+
+	/var/lib/tripwire
+
+in this file:
+	
+	society.intipen.edu.my.twd
+
+To check for intrusion:
+
+	tripwire --check
+
+Tripwire will then, compare the files in the system with the database above.
+If a backdoor has been installed or any program has been trojanized, tripwire
+will detect it.  The result of the check is stored in:
+
+
+	/var/lib/tripwire/report
+
+in these files:
+
+	society.intipen.edu.my-20020910-090403.twr
+	society.intipen.edu.my-20020921-090834.twr
+	society.intipen.edu.my-20021019-092158.twr
+
+Note that each time you do a check, it will generate a report with a 
+unique date extension as shown above.  twr stands for tripwire report.
+
+Then, to check the report and update the database with the reported 
+changes:
+
+	tripwire -m u -r <reportfile>
+
+
+eg,
+
+	tripwire -m u -r society.intipen.edu.my-20021019-092158.twr
+or,
+
+	tripwire --update -r reportfile.twr
+
+Tripwire will read the report and show you the changes made to the system
+since the last check. To update the database with the changes, just:
+
+
+	<ESC>:q
+
+ie, the vi editor command to quit the file.  Upon quitting, tripwire will
+update the database with the changes.
+
+
+
+You can make changes to the files to be included in the database, by editing
+the file:  
+
+	/etc/tripwire/twpol.txt
+
+
+cd to /etc/tripwire/   then, encrypt twpl.txt as follows: 
+
+
+	twadmin --create-polfile twpol.txt
+
+
+The encrypted file is called tw.pol, which is used to init the database.
+
+
+
+You can make changes to tripwire configuration by editing the file:
+
+	/etc/tripwire/twcfg.txt
+
+
+You then need to encrypt it to create the file tw.pol:
+
+
+	twadmin --create-polfile twpol.txt
+
+
+After changing the twpol.txt --> tw.pol and twcfg.txt --> tw.cfg files, you
+need to re-init the database:
+
+
+	tripwire --init
+
+
+and recheck the system for intrusion using the new twcfg.txt and twpol.txt
+policies;
+
+	tripwire --check
+
+
+
+Vulnerability Scans
+-------------------
+To ensure that the system is free from vulnerabilities, you should 
+regularly perform vulnerability scans on your server  using nessus.
+
+
+Download nessus from www.nessus.org
+
+
+It is distributed as a shell script:
+
+	nessus-installer.sh
+
+
+Install:
+
+	 sh nessus-installer.sh
+
+
+It will install the server and also the client.
+
+
+After compiling and installing, do the following:
+
+[1] Create a nessusd certificate using /usr/local/sbin/nessus-mkcert
+[2] Add a nessusd user using /usr/local/sbin/nessus-adduser
+[3] To uninstall, /usr/local/sbin/uninstall-nessus
+
+
+
+Start the nessusd daemon;
+
+	nessusd -D
+
+You should regularly update the plugins to make sure you have the latest
+vulnerability database as follows:
+
+
+	nessus-update-plugins
+
+
+The plugins are in:
+
+	/usr/local/lib/nessus/plugins
+
+To scan your system for vulnerabilities,
+startx and open an xterm then, start the client:
+
+	nessus
+
+Login to localhost, select the correct plugins and then,
+and server IP and start the scan.  It may take a long time,
+depending on the plugins selected.
+
+We assume that both the nessusd daemon and the client reside
+on the same host and that you are scanning another server.
+
+
+Once the scan is complete, go through the report. Pay special
+attention to the categories "Security Holes". These are the
+lists of vulnerabilities which can compromise the server. You should
+read the advisories referred in the report and immediately get the patch
+from: 
+
+
+	rhn.redhat.com/errata/rh72-errata.html
+
+or, related web-sites which release patches pertaining to the
+respective vulnerabilities.
+
+
+
+
+
+
+
+Patches
+-------
+Many attacks are based on  buffer overflows. These arise because of software
+bugs. The attacker sends a carefully crafted byte-stream which takes advantage
+of the software bugs and causes it to execute unathorized commands. Firewall
+filtering cannot prevent such attacks.  Removing banners can minimize it,
+since attackers will enumerate the banner in order to determine what exploits
+to use. For every system, there is an exploit somewhere out on the Internet
+that attackers will download and use. 
+
+
+To discover vulnerabilities on your server,  you should regularly perform
+vulnerability scanning on your own server, as described above.
+
+
+Therefore, the most effective defence against buffer overflow is to patch 
+the system against the latest discovered vulnerabilities.
+
+
+Apart from vulnerability scans, you should also regularly visit:
+
+	rhn.redhat.com/errata/rh72-errata.html
+
+for the latest patches.
+
+Determine which patches you need. Not all patches are needed. You only need
+to patch against those services which you are running. Eg, if you run
+apache, then all those patches relating to the web server must be patched.
+
+The patches are distributed in *.rpm format.  To patch just do this:
+
+
+	rpm -Uvh xinetd-2.3.9-0.72.i386.rpm
+
+The above will patch the xinetd server. If there is more than one patch
+file and each patch file has dependencies on each other, then do this:
+
+
+rpm -Uvh openssl-0.9.6b-28.i386.rpm \
+	 openssl-devel-0.9.6b-28.i386.rpm \
+	 openssl-perl-0.9.6b-28.i386.rpm
+
+In the above, each openssl patch depends on each other. Running rpm
+on all of them simultaneously solves the multiple dependencies problem.
+
+
+
+
+Email-borne Trojans [Microsoft Windows]
+---------------------------------------
+In Win98/ME, email attachments are often used to carry trojans.  Once
+the user clicks on the attachment, the trojan installs a backdoor and opens
+a port to wait for the attacker to connect. Worse still, the trojan can
+capture keylogs and passwords and email it to the attacker.
+
+WSH (Windows Scripting Host) and macros should be disabled.
+
+To shut out the backdoors so that the attacker cannot connect, you need
+to have all hosts situated  behind a firewall. And the firewall should be
+configured not to forward packets originating from backdoor ports, eg,
+
+	/sbin/iptables -A FORWARD -p tcp --sport 36794 -j LOG
+	/sbin/iptables -A FORWARD -p tcp --sport 36794 -j DROP
+
+
+The above example blocks the Bugbear trojan's backdoor.
+
+This will frustrate the backdoor even though the trojan has successfully
+installed the backdoor. But we still can't prevent the trojan from e-mailing
+keylogs to the attacker, unless we totally block port 25.
+
+By the same token, if we block port 110, no trojans can come in. But
+at the same time, no one can retrieve emails.
+
+
+Users, should have the latest anti-virus with the latest signature files 
+installed, with auto-protect on. They should not open attachments, if
+possible.  If there is a real need to open attachments, then, save the
+attachment elsewhere and scan it with an antivirus first.
+
+Also, windows Users should not surf the Internet with File Sharing enabled.
+They should also install a host-based firewall, eg ZoneAlarm.
+
+
+The following programs are useful:
+
+	Norton AntiVirus [ you need to buy ]
+	ZoneAlarm  [ obtainable free from www.zonelabs.com ]
+
+
+To secure linux workstations, just turn off all services and run
+a host-based linux firewall which blocks all INPUT except those 
+packets which are in reponse to OUTPUT packets.
+
+
+
+
+Firewall
+--------
+Linux uses the iptables program as the firewall administration tool.
+Rulesets are written as scripts and started as scripts. Please refer to
+the chapter on Firewalls for details. 
+
+
+Secure Logins
+-------------
+The sshd server should be run.
+
+For secure telnet, use ssh to connect:
+
+	ssh -l bill servername
+
+For secure ftp,
+
+	sftp bill@servername
+
+Note that for sftp, two servers need to be up:
+
+	ftp and sshd
+
+
+
+Sudo
+----
+Sudo is used to limit the number of people who can login as root.
+You should not give the root password to another. Instead, use visudo
+to edit the /etc/sudoers file to allow specific users to run some
+administrative commands, eg, adduser.
+
+The /etc/sudoers file contains a lists of users who may execute what.
+An example is shown below:
+
+
+.......................................................
+# sudoers file.
+#
+# This file MUST be edited with the 'visudo' command as root.
+#
+# See the sudoers man page for the details on how to write a sudoers file.
+#
+
+# Host alias specification
+
+# User alias specification
+
+# Cmnd alias specification
+
+# User privilege specification
+#root	ALL=(ALL) ALL
+alexng ALL=(root) /usr/sbin/adduser,/usr/bin/passwd,!/usr/bin/passwd root
+..................................................................
+
+
+In the above example, Mr Alex Ng can run the command adduser and passwd, but
+cannot run the passwd command on the root account. In other words, Mr Alex can
+add create new user accounts, change their passwords, but, he cannot change
+root's password.
+
+
+If Mr Alex then wants to run the adduser command, he should type:
+
+	sudo -u alexng adduser
+
+
+He will then be prompted for his password.
+If correct, the adduser command will be executed.
+
+To get more details check the sudoers man page:
+
+	man 5 sudoers
+
+
+
+sshd
+----
+edit the /etc/ssh/sshd_config file the line as follows:
+
+  PermitRootLogin yes
+
+to
+		
+  PermitRootLogin no 
+
+
+TCP wrappers
+------------
+to deny access from 192.168.0.3, edit /etc/hosts.deny by
+inserting this line:
+
+	ALL:192.168.0.3
+
+ALL means all services. 
+No need to do /etc/init.d/xinetd restart.
+
+Originally tcpwrapper works with inetd, but redhat and mandrake
+now uses xinetd in place of inetd.
+
+Note that if you did this in /etc/hosts.deny:
+
+	ALL:ALL
+
+then, you can use /etc/hosts.allow to specifically allow
+hosts - much like a default deny policy in firewalls. See
+Firewall.txt
+
+Alternatively, see man xinetd.conf and Smith at p. 365 which 
+describes the use of these parameters in /etc/xinetd.d:
+
+	only_from
+	no_access
+
+
+
+
+
+
+
+
+Bibliography
+------------
+Smith, R.W (2001). Linux+ Study Guide. Alameda:CA

@@ -1,0 +1,307 @@
+WEB SERVER
+==========
+
+Objective
+---------
+To start, stop and configure web server and cgi-script
+capability.
+
+
+Starting and Stopping Servers
+-----------------------------
+Servers are programs that run in the background and provide
+services to client programs. The Web Server is called
+httpd, also known as Apache. To start,
+
+	/etc/rc.d/init.d/httpd start
+
+To restart
+
+	/etc/rc.d/init.d/httpd restart
+
+To stop
+
+	/etc/rc.d/init.d/httpd stop
+
+To find out if it is running
+
+	/etc/rc.d/init.d/httpd status
+
+Or, more commonly,
+
+	netstat -tan
+
+You will see something like this:
+
+
+Proto Recv-Q Send-Q Local Address           Foreign Address         State      
+tcp        0      0 0.0.0.0:80              0.0.0.0:*               LISTEN      
+tcp        0      0 0.0.0.0:23              0.0.0.0:*               LISTEN      
+tcp        0      0 192.168.1.173:1881      192.168.20.3:22         ESTABLISHED 
+
+
+Notice the line with "0.0.0.0:80 ......        LISTEN"
+
+This shows that the web server is up and running.
+
+
+
+Web Server Configuration File
+-----------------------------
+The web server configuration file is:
+
+	/etc/httpd/conf/httpd.conf
+
+At this point, the only variable  you need to set is the 
+ServerName directive.
+
+Open the httpd.conf file with vi editor and look for the
+variable "ServerName".  If your Server name is "Ronin"
+set:
+
+	ServerName Ronin
+
+Note that the default is 
+
+	ServerName localhost
+
+which will produce an error when you try to start the server.
+This servername should also match the name given in 
+
+	/etc/hosts
+
+eg, 
+	
+	127.0.0.1	Ronin localhost.localdomain localhost
+	192.168.20.3	Ronin		
+	192.168.1.3	intipen
+
+
+and
+	/etc/sysconfig/network
+
+eg,
+
+	NETWORKING=yes
+	HOSTNAME=Ronin
+	GATEWAY=192.168.1.1
+
+
+Everytime you make any changes to httpd.conf, you will need to
+restart the httpd server for the new configuration to take
+effect.
+
+
+Web Server Root Directory
+-------------------------
+The web server root directory is:
+
+	/var/www/
+
+All web pages should be placed in /var/www/html and all cgi
+scripts should be placed in /var/www/cgi-bin
+
+cgi scripts are programs. It may be written in shell, bash,
+perl, PHP , C, etc.
+
+You can run a program by entering the URL as follows:
+
+	http://192.168.0.1/cgi-bin/hello.sh
+
+assuming you have written a program called "hello.sh" and
+put it in /var/www/cgi-bin, and your server's IP address is
+192.168.0.1.
+
+All html pages should be put in /var/www/html.  the default
+web page is index.html.  If you entered an URL like this:
+
+	 	
+	http://192.168.0.1/cgi-bin/hello.sh
+
+
+It will execute the "hello.sh" program.  An example of a 
+hello.sh is:
+
+	
+	#!/bin/sh
+
+	echo Content-type:text/html
+	echo
+	echo Hello World
+
+
+The program merely echoes the message "Hello World" to the user's
+web browser.
+
+
+Web Server Directories for Users
+-------------------------------------
+Only root has write permission  to the root directory:
+
+	/var/www
+
+For ordinary users, they cannot write to the root directory.
+However, you can enable them to use their home directories to 
+house web pages and cgi-scripts. 
+
+Edit this file 
+
+	/etc/httpd/conf/httpd.conf
+
+by enabling the directive "UserDir" as follows:
+
+	UserDir public_html
+
+Then restart the httpd server.  The system administrator then
+needs to:
+
+	
+	chmod 711 /home/bill
+	mkdir 	  /home/bill/public_html
+	chmod 755 /home/bill/public_html
+
+The user puts his "index.html" (the default page) into the
+public_html directory and all other web pages as well
+
+
+cgi-bin and php directories for Users
+-------------------------------------
+In order for non-root users to write and use their own
+cgi scripts, we need to:
+
+	download and install cgiwrap-3.7
+
+The current version of CGIwrap is available from:
+
+	http://cgiwrap.unixtools.org
+	http://sourceforge.net/projects/cgiwrap
+
+Alternatively, use www.google.com to search for the latest
+web-site for cgiwrap.
+
+
+What is CGIwrap?
+-----------------
+
+CGIWrap is a gateway that allows more secure user access to
+CGI programs on the http server. The primary function of
+CGIwrap is to make certain that any CGI script runs with 
+the permissions of the user who installed it, and not those
+of the server.
+
+Use these commands:
+
+	gunzip cgiwrap-3.7.tar.gz
+	tar -xvf cgiwrap-3.7.tar
+
+Then enter the cgiwrap-3.7 directory,
+
+	cd cgiwrap-3.7
+
+
+
+CGIWrap - Installation Instructions
+-----------------------------------
+
+Issue 
+	./configure --help 
+
+to find out the various configuration options. You will need
+to specify some of them. At the very least, you will want to 
+specify 
+
+	./configure --with-httpd-user=apache
+
+Note that the "User" directive is found in the 
+
+	/etc/httpd/conf/httpd.conf
+
+and is set as:
+
+	User apache
+
+Type
+	make
+
+If you specified the installation directory in the options, 
+you can type
+
+	make install
+
+Once the executable "cgiwrap" has been compiled, copy it to your
+servers cgi-bin directory
+
+	/var/www/cgi-bin
+
+Make "cgiwrap" owned by root, executable by all, and setuid.
+(Note: This step must be performed while logged in as "root")
+
+          chown root cgiwrap
+          chmod 4755 cgiwrap
+
+Symlink nph-cgiwrap, nph-cgiwrapd, cgiwrapd to cgiwrap in
+the cgi-bin directory.
+
+          ln -s cgiwrap cgiwrapd
+          ln -s cgiwrap nph-cgiwrap
+          ln -s cgiwrap nph-cgiwrapd
+
+
+
+
+Then append to /httpd/conf/httpd.conf:
+
+	RewriteEngine On
+	RewriteRule ^/~(.*)/cgi-bin/(.*) /cgi-bin/cgiwrap/$1/$2 [PT]
+
+
+Then restart:
+	/etc/rc.d/init.d/httpd restart
+
+
+
+
+
+Where to put html and scripts
+------------------------------
+Where to put your html pages and cgi scripts
+
+
+Create these directories:
+
+  /home/username/public_html
+  /home/username/public_html/cgi-bin
+  /home/username/public_html/php
+
+Put index.html and all .html pages in public_html directory
+Put shell and perl scripts in cgi-bin directory
+Put php scripts in php directory
+
+
+Remember to chmod 755 all your scripts to make them executable, eg
+
+  chmod 755 hello.cgi
+
+
+To access the cgi scripts, use the following URLs:
+
+http://www.abc.com/~username/   [ default web page is index.html ]
+http://www.abc.com/~username/cgi-bin/hello.cgi
+http://www.abc.com/~username/php/hello.php
+
+
+
+
+Redirects
+---------
+To redirect all requests to another web-site, insert this line
+in /etc/httpd/conf/httpd.conf :
+
+	<VirtualHost 219.93.225.219>
+           ServerName hostel
+	   Redirect /index.html http://iicpen.intipen.edumy/index.html
+	</VirtualHost>
+
+where 219.93.225.219 (which could be in name as well) is the IP (or name)
+of the machine that apache runs on, and, "hostel" or FQDN (eg, www....),
+is the name of the machine that apache runs on.

@@ -1,0 +1,110 @@
+GROUPS
+=======
+
+
+Objective
+---------
+Creating and adding groups.
+
+
+Creating Group
+--------------
+groupadd project
+
+
+Adding members
+--------------
+To add bill to project group, first find out what groups
+he belong to:
+
+	groups bill
+
+	bill:  bill
+or,
+
+	id bill
+	
+Then, 
+	usermod -G bill,project bill
+
+If you did this:
+
+	usermod -G project bill
+
+bill will lose membership to his own default group bill!
+That is why you need to do:
+
+	groups bill 
+
+first.
+
+
+
+If you accidentally removed bill from his group ( ie bill),
+the scripts in his /home/bill/public_html/cgi-bin
+will break:
+
+	cannot execute script, <scriptname> does not have same ID
+	
+
+If you did a mistake and want to restore bill to his default
+group:
+
+	usermod -g bill bill
+
+The syntax:
+
+	usermod -g <group> bill
+
+
+
+
+Setting permission on group files
+---------------------------------
+Allow only members of project group to read file, eg:
+
+	chmod 660 projectfile.txt
+
+
+
+
+
+Only root
+---------
+All the steps above can only be done by root.
+
+
+
+
+How to change group
+-------------------
+After root has setup the groups as above, bill may 
+change group as follows:
+
+	newgrp project
+
+He can then create files all of which will have the
+following ownership:
+
+	bill.project    file.txt
+
+To revert back to his original group:
+
+	newgrp bill
+
+or, better still:
+
+	exit
+
+The newgrp command will create subshells
+
+
+
+
+
+
+
+
+Bibliography
+------------
+Smith, R.W.(2001). Linux+  Study Guide.  Alameda:California

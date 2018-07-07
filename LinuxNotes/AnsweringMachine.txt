@@ -1,0 +1,80 @@
+ANSWERING MACHINE
+=================
+
+Objective
+---------
+Using Linux as answering machine.
+
+
+Config file
+-----------
+
+/etc/mgetty+sendfax/voice.conf
+
+Set voice_devices ttyS1
+Set port ttyS1
+
+
+
+Voice directories
+-----------------
+
+/var/spool/voice/incoming/
+/var/spool/voice/messages/
+
+
+Greeting message is standard.rmd
+Plug mic into modem and record greeting with this command:
+
+	vm record -m /var/spool/voice/messages/standard.rmd
+
+
+
+
+Start Answering Machine
+-----------------------
+
+Command:
+
+	vgetty -n 3 /dev/ttyS1
+
+where 3 is answer after 3 rings and ttyS1 is the modem
+
+
+When someone calls, the modem answers after the 3rd ring and plays
+the greeting, then records the message of the caller.
+
+
+To playback, goto /var/spool/voice/incoming/ directory and play the
+*.rmd file as follows:
+
+
+rmdtopvf v-26622-1041690637.rmd | pvfspeed -s 8000 | pvftobasic > /dev/audio
+
+
+where v-26622-1041690637.rmd is the recorded caller's message.
+
+To playback on modem speaker:
+
+	vm play -s  v-26622-1041690637.rmd 
+
+
+
+Using /etc/inittab
+------------------
+
+The above is the lazy way to start the answering machine, ie, via the
+command line. The log files /etc/log/vgetty.log.ttyS1 will show an error.
+The proper way is:
+
+[ from http://linuxindia.virtualave.net/lamhowto.html ]
+
+"Replace the invocation of mgetty in your /etc/inittab with
+vgetty if there is one. If there is no mgetty invocation you just have
+to insert a lne like:
+
+S1:345:respawn:/sbin/vgetty ttyS1
+
+in your  /etc/inittab file."
+
+Then reboot.

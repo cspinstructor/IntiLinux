@@ -1,0 +1,344 @@
+VPN-PPPSSH
+==========
+
+Objective
+---------
+Creating a VPN using PPP and SSH.
+Modified from VPN PPP-SSH Mini HowTo by Scott Bronson.
+
+
+
+Terminology
+-----------
+PPP is the datalink's Point-to-point protocol used to provide machine-
+-to-machine connection.
+
+SSH is Secure Shell, an application layer protocol, which provides 
+application-to-application encrypted link.
+
+VPN is Virtual Private Network, a method of providing LAN-to-LAN transparent
+access across the Internet.
+
+
+In a Nutshell
+-------------
+This is much easier to setup than VPN-PPTP. Basically, we just generate root's
+public key and copy it to the server, then run Bronson's script. That's it!
+
+
+Architecture
+------------
+As proof of concept, we will use the following
+LAN:
+
+
+	nobok	   <------>	w
+      [192.168.0.2]        [192.168.0.1]
+      <192.168.3.1>        <192.168.3.2> 
+
+     Fig. A - Lab setup for VPN experiment
+    --------------------------------------
+
+
+w is the VPN server with NIC's IP 192.168.0.1, but for
+VPN interface we are going to use 192.168.3.1.
+
+nobok is the VPN client with NIC's IP 192.168.0.2, but for
+VPN interface we are going to use 192.168.3.2.
+
+Note that in an actual practical VPN, nobok's and w's
+actual NIC address will be that of a public Internet 
+interface.
+
+
+Programs
+--------
+We need pppd (ppp server) and sshd (ssh server).
+
+
+
+We use Scott Bronson's  script called vpn-pppsh.sh which we copy to:
+
+
+	/usr/local/vpn/vpn-pppsh.sh
+
+
+[vpn-pppsh.sh]
+
+#!/bin/sh
+# /usr/local/bin/vpn-pppssh
+#
+# This script initiates a ppp-ssh vpn connection.
+# see the VPN PPP-SSH HOWTO on http://www.linuxdoc.org for more information.
+#
+# revision history:
+# 1.6 11-Nov-1996 miquels@cistron.nl
+# 1.7 20-Dec-1999 bart@jukie.net
+# 2.0 16-May-2001 bronson@trestle.com
+
+
+#
+# You will need to change these variables...
+#
+
+
+# The host name or IP address of the SSH server that we are
+# sending the connection request to:
+#SERVER_HOSTNAME=eldivino.domain.com
+SERVER_HOSTNAME=192.168.0.1
+
+# The username on the VPN server that will run the tunnel.
+# For security reasons, this should NOT be root.  (Any user
+# that can use PPP can intitiate the connection on the client)
+#SERVER_USERNAME=vpn
+SERVER_USERNAME=root
+
+# The VPN network interface on the server should use this address:
+#SERVER_IFIPADDR=192.168.3.2
+SERVER_IFIPADDR=192.168.3.1
+
+# ...and on the client, this address:
+#CLIENT_IFIPADDR=192.168.3.1
+CLIENT_IFIPADDR=192.168.3.2
+
+
+# This tells ssh to use unprivileged high ports, even though it's
+# running as root.  This way, you don't have to punch custom holes
+# through your firewall.
+LOCAL_SSH_OPTS="-P"
+
+
+#
+# The rest of this file should not need to be changed.
+#
+
+
+
+PATH=/usr/local/sbin:/sbin:/bin:/usr/sbin:/usr/bin:/usr/bin/X11/:
+
+#
+# required commands...
+#
+
+PPPD=/usr/sbin/pppd
+SSH=/usr/bin/ssh
+
+if ! test -f $PPPD  ; then echo "can't find $PPPD";  exit 3; fi
+if ! test -f $SSH   ; then echo "can't find $SSH";   exit 4; fi
+
+
+case "$1" in
+  start)
+    # echo -n "Starting vpn to $SERVER_HOSTNAME: "
+    ${PPPD} updetach noauth passive pty "${SSH} ${LOCAL_SSH_OPTS} ${SERVER_HOSTNAME} -l${SERVER_USERNAME} -o Batchmode=yes sudo ${PPPD} nodetach notty noauth" ipparam vpn ${CLIENT_IFIPADDR}:${SERVER_IFIPADDR}
+    # echo "connected."
+    ;;
+
+  stop)
+        # echo -n "Stopping vpn to $SERVER_HOSTNAME: "
+        PID=`ps ax | grep "${SSH} ${LOCAL_SSH_OPTS} ${SERVER_HOSTNAME} -l${SERVER_USERNAME} -o" | grep -v ' passive ' | grep -v 'grep ' | awk '{print $1}'`
+        if [ "${PID}" != "" ]; then
+          kill $PID
+          echo "disconnected."
+        else
+          echo "Failed to find PID for the connection"
+        fi
+    ;;
+
+  config)
+    echo "SERVER_HOSTNAME=$SERVER_HOSTNAME"
+    echo "SERVER_USERNAME=$SERVER_USERNAME"
+    echo "SERVER_IFIPADDR=$SERVER_IFIPADDR"
+    echo "CLIENT_IFIPADDR=$CLIENT_IFIPADDR"
+  ;;
+
+  *)
+    echo "Usage: vpn {start|stop|config}"
+    exit 1
+    ;;
+esac
+
+exit 0
+
+# ------   EOF   -------
+
+
+
+The parts which we need to change are:
+
+	SERVER_HOSTNAME=192.168.0.1
+	SERVER_USERNAME=root
+	SERVER_IFIPADDR=192.168.3.1
+	CLIENT_IFIPADDR=192.168.3.2
+
+
+We use the above script is in the Client machine nobok.
+We need to be root to call it:
+
+	/usr/local/vpn/vpn-pppsh.sh  <start|stop|config>
+
+
+start -> connects to Server and brings up the VPN tunnel.
+stop  -> brings it down.
+config -> shows the configuration parameters: 
+
+
+	SERVER_HOSTNAME=192.168.0.1
+	SERVER_USERNAME=root
+	SERVER_IFIPADDR=192.168.3.1
+	CLIENT_IFIPADDR=192.168.3.2
+
+
+Note that if you already have ppp0 running streamyx on the 
+server, the VPN tunnel will run on ppp1.  The firewall still
+NATS and masquerades like normal!!  You don't see such things
+happening so easily with PPTP.
+
+
+
+Server Config
+-------------
+In order to work, ssh must be initiated between nobok and w without
+password authentication, then pppd runs ontop of ssh - creating a tunnel.
+
+On nobok, as root:
+
+	mkdir .ssh
+	ssh-keygen -t rsa
+	
+Accept the defaults filenames for the public key: 
+
+	id_rsa.pub
+
+and private key:
+
+	ida_rsa.pub
+
+Note, that you need to do ssh-keygen -t rsa, and NOT
+ssh-keygen -t rsa1.  The former is RSA v. 2 which is being used on
+RedHat 8.
+	
+Also accept the default .ssh directories where the public and private
+keys will be copied to:
+
+	/root/.ssh/
+
+
+Then,
+
+	sftp root@w
+	cd .ssh
+	put ida_rsa.pub
+
+Be sure to upload the public key:
+
+	ida_rsa.pub
+
+and NOT the private key:
+
+	ida_rsa
+
+Then, from nobok,
+
+	ssh w
+
+and you get the shell immediately, without password.
+Exit.
+
+
+
+Bring up the VPN tunnel
+----------------------
+On nobok,
+
+	/usr/local/vpn/vpn-pppsh.sh  start
+
+and you will get the connection messages:
+
+	Connect: ppp0 <--> /dev/pts/1
+	Deflate (15) compression enabled
+	local  IP address 192.168.3.2
+	remote IP address 192.168.3.1
+
+
+
+You can now telnet, ftp, http, etc... to server w
+using the VPN tunnel.
+
+
+To bring down the VPN tunnel,
+
+	/usr/local/vpn/vpn-pppsh.sh  stop
+
+
+
+
+
+Usage
+-----
+can run telnet, ftp, ssh, sftp, http, etc...
+eg,
+
+	telnet 192.168.3.1
+	ssh -l root 192.168.3.1
+	sftp v@192.168.3.1
+
+Note the IP address:
+
+	192.168.3.1
+
+is the VPN virtual interface on the VPN server.
+After, ssh'ing to 192.168.3.1, if you did this:
+
+	netstat -tan
+
+on the server, you will note the following:
+
+  	Local Address	Foreign Address
+tcp	192.168.3.1:22	192.168.3.2
+
+meaning that the client uses its local virtual 
+VPN interface:
+
+	192.168.3.2
+
+and NOT its actual NIC's IP address 192.168.0.2
+to connect to the server's virtual VPN interface.
+
+This is the basis of VPN,  the actual public interface
+may be a public IP address eg, 202.123.11.67
+but when using VPN, we connect to an Intranet address.
+Note the vpn-pppsh.sh script, where we specified the actual
+public address:
+
+	SERVER_HOSTNAME=202.123.11.67
+	SERVER_USERNAME=root
+	SERVER_IFIPADDR=192.168.3.1
+	CLIENT_IFIPADDR=192.168.3.2
+
+as the 	SERVER_HOSTNAME=202.123.11.67
+
+but when VPN'ng, we use the Intranet addresses:
+
+	SERVER_IFIPADDR=192.168.3.1
+	CLIENT_IFIPADDR=192.168.3.2
+
+The effect of which is to connect 2 LAN's separated by Internet, as
+shown by Fig B below:
+
+
+	LAN A					LAN B
+		       i n t e r n e t     
+		 -----------------------------     
+       192.168.3.2	    tunnel	     192.168.3.1	
+		 -----------------------------
+       219.95.12.15             		202.123.11.67
+            ^ actual IP				     ^ actual IP
+	  
+
+	Fig B.   Using Virtual Interfaces to do LAN
+	--------------------------------------------
+
+
+
+And the traffic within the tunnel is encrypted.

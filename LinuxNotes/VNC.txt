@@ -1,0 +1,229 @@
+VNC (Virtual Network Computing)
+==============================
+
+Objective
+---------
+To install, setup and use VNC.
+
+
+What is VNC?
+------------
+VNC is an Open Source software used to remotely view a Desktop of 
+a computer across the Internet/Network and to run commands remotely
+by clicking on the icons in the Desktop as though it were local.
+
+Useful for:
+
+	1.  Network Management & Monitoring
+	    eg, using your office Linux computer to access
+	    your home Windows computer to start or stop
+	    a webcam
+
+	2.  Using Windows PC to access desktops of
+	    other computers with different OS.
+	    eg,	using your home windows computer to access
+            the desktop of your linux PC
+
+	3.  Save costs by sharing one monitor with many PCs.
+
+
+
+Where to get it?
+----------------
+VNC is developed by AT&T Labs and University of Cambridge,
+Dept of Engineering. It comes with RedHat Linux 8.  But, for
+earlier distros, we need to download it from:
+
+http://www.uk.research.att.com/vnc/index.html
+
+At time of writing, the latest version is vnc-3.3.7.
+
+
+Architecture
+------------
+The installation binary comes with vncserver and vncviewer
+
+
+	[ Win9x/ME/XP/2000 ]   [ Linux ]
+             vncviewer  <-----> vncserver 
+	     vncserver  <-----> vncclient
+
+	Fig A.  VNC server and client
+	-----------------------------
+
+
+In Fig A. the vncviewer on Windows can view the desktop
+of the Linux's Xwindow.  On the other hand, the Linux viewer
+can view the windows Desktop.
+
+
+
+Installation
+============
+
+Linux
+-----
+	
+	gunzip vnc-3.3.7-x86_linux.tar.gz
+	tar -xvf vnc-3.3.7-x86_linux.tar
+
+
+	cd  vnc-3.3.7-x86_linux/
+
+You will see the following files
+
+
+	vncconnect
+	vncinstall
+	vncpasswd
+	vncserver
+	vncviewer
+	Xvnc
+	Xvnc.man
+	vncconnect.man
+	vncpasswd.man
+	vncserver.man
+	vncviewer.man
+
+
+Run the installation program:
+
+	vncinstall  <installation-directory> [<man-page-directory>]
+
+e.g.   
+	vncinstall /usr/local/bin
+
+
+You can change the vncserver password by running the vncpassd program.
+
+
+
+
+Configuration
+-------------
+Configuration file is in your home directory:
+
+	 /home/paul/.vnc/xstartup
+
+
+snip..................................................
+#!/bin/sh
+
+[ -r $HOME/.Xresources ] && xrdb $HOME/.Xresources
+xsetroot -solid grey
+xterm -geometry 80x24+10+10 -ls -title "$VNCDESKTOP Desktop" &
+startkde &
+snip.....................................................
+
+
+The default windows manager is twm, change it to your favourite,
+in the above example, I use startkde.
+
+
+
+For the Windows' version, do not change any of the default
+config, leave the following ticked:
+
+	[ Incoming Connections ]
+	Accept Socket Connections
+	Display Number - Auto	
+	Enable Java Viewer
+
+
+	[ When Last Client Disconnects ]
+	Do Nothing
+	
+
+	[ Update Handling ]
+	Poll Foreground Window
+	Poll Console Windows Only
+
+
+Leave all others unticked.
+
+
+
+Win9x/ME/XP/2000
+---------------
+Install the windows version on the Windows box.
+
+
+
+
+STARTING THE SERVER
+-------------------
+
+Linux:   vncserver
+
+Windows: double click on vncserver icon.
+
+Linux vncserver listens on port 5901 by default.
+Windows vncserver listens on port 5900 by default.
+
+It may be a good idea to do this:
+
+	vncserver -geometry 800x600
+
+
+because the default is 1024x768, which is too big for the Windows
+Desktop.
+
+
+To stop the linux vncserver:
+
+	 killall -9  Xvnc
+
+
+
+CONNCECTING TO THE SERVER
+-------------------------
+
+Linux connecting to Windows:
+
+	vncviewer 192.168.0.3:0
+
+	[ie, port 5900]
+
+
+Windows connecting to Linux:
+
+	click on vncviewer icon and in the textbox, enter:
+
+	192.168.0.1:1
+
+	[ie, port 5901]
+	
+
+
+
+CONNECTING TO A SERVER WHICH IS BEHIND A FIREWALL
+--------------------------------------------------
+
+Assuming the architecture as in Fig B below:
+
+
+     Client                        |  Linux   |       VNC
+      PC    ----> [ INTERNET ] --> | Firewall | <--> Server
+                                   |          |
+
+	 Fig B. Traversing a firewall 
+	 ----------------------------
+
+
+Configure the firewall such that whenever there is an inbound
+request to port 5900, it should be DNAT to the internal 
+IP address 192.168.0.3 port 5900 (for Windows vncserver), or
+port 5901 (for Linux vncserver).
+
+
+Insert this rule in your firewall script:
+
+
+	$IPTABLES -t nat -A PREROUTING -i $EXTIF -p tcp --dport 5900 \
+ 		  -j DNAT --to-destination 192.168.0.3:5900 
+
+
+See the chapter Firewall.txt for firewall details.
+
+
+

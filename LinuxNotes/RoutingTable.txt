@@ -1,0 +1,77 @@
+ROUTING TABLE SETTINGS 
+----------------------
+
+Objective
+---------
+To set up interfaces and routing table for Linux Firewall
+Gateway using DSL ATM Router.
+
+
+
+Architecture:
+-------------
+		      Linux
+	LAN ---	eth0 Firewall eth1 --- Lucent Cellpipe --- Internet
+				         ATM DSL Router
+
+
+
+Note that rp-pppoe (Roaring Penguin) doesn't work with ATM DSL router.
+rp-pppoe is PPP protocol on Ethernet, and the Aztech modem is actually
+a bridge.
+
+On the other hand, the ATM DSL runs the Ethernet over ATM protocol and 
+the DSL device is actually a router.
+
+
+
+route command:
+--------------
+
+route
+
+Kernel IP routing table
+Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
+210.187.9.105   *               255.255.255.255 UH    0      0        0 eth1
+210.187.9.104   *               255.255.255.252 U     0      0        0 eth1
+192.168.0.0     *               255.255.0.0     U     0      0        0 eth0
+default         210.187.9.105   0.0.0.0         UG    0      0        0 eth1
+
+
+Setting eth0 and eth1:
+----------------------
+
+ifconfig eth0 192.168.3.245 netmask 255.255.0.0 up
+ifconfig eth1 210.187.9.106 netmask 255.255.255.252 up
+
+
+Setting routing tables:
+-----------------------
+When setting default gateways, be sure to first
+Set as static route:
+
+	route add 210.187.9.105 eth1
+
+then, set as default route:
+
+	route add default gw 210.187.9.105 eth1
+
+
+
+For dynamic IP streamyx service, do this:
+
+	route add default dev ppp0
+
+
+
+Checking ifconfig:
+------------------
+
+eth0      Link encap:Ethernet  HWaddr 00:20:ED:94:43:1F  
+          inet addr:192.168.3.245  Bcast:192.168.3.255  
+
+eth1      Link encap:Ethernet  HWaddr 00:A0:C9:E6:A2:A9  
+          inet addr:210.187.9.106  Bcast:210.187.9.255  
+
+lo        Link encap:Local Loopback  
+          inet addr:127.0.0.1  Mask:255.0.0.0

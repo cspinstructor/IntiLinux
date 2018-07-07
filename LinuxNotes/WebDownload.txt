@@ -1,0 +1,11 @@
+WEB DOWNLOAD
+------------
+
+w3c http://www.website.com > website.com
+
+or
+
+wget http://www.website.com
+
+
+See man.

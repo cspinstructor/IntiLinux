@@ -1,0 +1,166 @@
+EXPECT
+======
+
+Objective
+---------
+Using expect to automate email sending.
+
+Script
+------
+
+An example script called smtpyahoo.exp is shown below:
+
+
+[smtpyahoo.exp]
+snip..................................................
+#!/usr/bin/expect
+spawn telnet mx2.mail.yahoo.com 25 
+
+expect -re "220" 
+send "HELO coolmail\r"
+
+expect -re "250"
+send "MAIL FROM:<Bill@microsoft.com>\r"
+
+expect -re "250"
+send "RCPT TO:<Bush@yahoo.com>\r"
+
+expect -re "250"
+send "DATA\r"
+
+expect -re "354"
+send "TO:Bush@yahoo.com\r"
+send "FROM:Bill@microsoft.com\r"
+send "SUBJECT:Expect is Cool\r"
+send "DATE:28 Feb 28, 2003\r"
+send "\n\n\r"
+send "Using Expect to automate email\r"
+send "\r\n.\r\n"
+
+expect -re "250"
+send "quit\r"
+
+
+snip..................................................
+
+
+chmod 755 smtpyahoo.exp
+
+Then run:
+
+	./smtpyahoo.exp
+
+
+
+
+Note that yahoo requires the angle brackets :
+
+MAIL FROM:<Bill@microsoft.com>
+
+RCPT TO:<Bush@yahoo.com>
+
+
+
+
+Another example
+---------------
+Another script called smtphotmail.exp is shown below :
+
+
+[smtphotmail.exp]
+snip................................................
+#!/usr/bin/expect
+spawn telnet mx2.hotmail.com 25 
+
+expect -re "220" 
+send "HELO coolmail\r"
+
+expect -re "250"
+send "MAIL FROM:Bill\r"
+
+expect -re "250"
+send "RCPT TO:paulchin20@hotmail.com\r"
+
+expect -re "250"
+send "DATA\r"
+
+expect -re "354"
+send "TO:Pianoman\r"
+send "FROM:Expect\r"
+send "SUBJECT:Expect is Cool\r"
+send "DATE:28 Feb 28, 2003\r"
+send "\n\n\r"
+send "Using Expect to automate email\r"
+send "\r\n.\r\n"
+
+expect -re "250"
+send "quit\r"
+
+snip....................................................
+
+
+
+
+To find email servers
+---------------------
+dig mx yahoo.com
+dig mx hotmail.com
+dig mx sms.maxis.net.my
+
+
+Possible Applications
+----------------------
+Server email or SMS you when a specified event occurs.
+
+
+For maxis SMS, set receipt to as follows:
+
+RCPT TO:  0125845840@sms.maxis.net.my
+
+
+
+
+
+
+
+To call system commands and other programs
+------------------------------------------
+This script will call the command ls
+
+#!/usr/bin/expect 
+
+spawn sh
+send  "ls\r"
+send "exit\r"
+interact
+
+
+To send long data
+-----------------
+send "Dear Ilx,\n"
+send "\n"
+send "How are you blah blah blah...\n"
+send "Did you hear about what happened to blah,blah blah...\n"
+send "blah,blah,blah\n"
+send "blah,blah,blah\n"
+send "blah,blah,blah\n"
+send "blah,blah,blah\n"
+send "blah,blah,blah\n"
+send "\r\n.\r\n"
+
+
+Anonymous Mail
+---------------
+To send anonymous mail, 
+
+send "MAIL FROM:-\r"
+
+But Outlook and Ximian Evolution can reveal the linux box
+hostname. Therefore, be sure to reset the hostname, eg:
+
+	hostname gigi
+
+Also, don't forget to alter the /etc/hosts and also the DNS records in
+/var/named/
+
+But, IP is still revealed. Use a relaying-enabled email server.

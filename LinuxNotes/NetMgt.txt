@@ -1,0 +1,194 @@
+NETWORK MANAGEMENT
+==================
+
+Objective
+---------
+To familiarize oneself with common Network Management and Monitoring tools.
+The commands below are ordered aphabetically.
+This chapter describes some utility programs, not SNMP.
+SNMP is described in the SNMP.txt chapter.
+
+
+
+arp
+---
+To check for the MAC addresses of other hosts on the LAN:
+
+	arp
+
+
+or, to find out a specific IP's MAC address:
+
+	arp -a 192.168.1.2
+
+
+
+dig
+---
+To query a nameserver for resource records.
+
+	dig mx www.hotmail.com
+
+will give the email smtp server's name
+
+	dig ns www.hotmail.com
+
+will give hotmail's name server.
+
+
+
+host
+----
+To find out the IP address of a name:
+
+	host www.hotmail.com
+
+
+lsof
+---
+To find out what program is using a particular port:
+
+	lsof -i tcp:23
+
+for tcp and port 23, or,
+
+	lsof -i udp:517
+
+to investigate udp port 517
+
+lsof will display, among others, the PID of the process that is
+using the port. You can then do a kill -9 on the PID.
+
+
+An alternative is to use netstat as described below.
+
+
+netstat 
+-------
+
+To find out what services are up and running:
+
+
+[tcp]
+	netstat -tan   
+
+[udp]
+	netstat -uan
+
+
+[tcp with name of services]
+
+	netstat -ta
+
+[udp with name of services]
+
+	netstat -ua
+
+netstat is also used to see who is connected to the server.
+
+To behave likd lsof, ie, find out the PID and program name that is 
+using the portnumbers:
+
+	netstat -tanp
+
+
+
+nmap
+----
+To check which hosts are alive on the Network:
+
+	nmap -sP 192.168.1.2-254 > nmap.txt
+
+
+The -s is to specify scan type, -sP means ping sweep.
+
+
+To check what ports are open on a machine:
+
+	nmap -sS 192.168.1.2 > nmap.txt
+
+-sS means scan type is stealth.
+
+To scan a range of IP and the open ports for each IP:
+
+	nmap -sS 192.168.1.2-100 > nmap.txt
+
+
+
+
+
+To find out the OS of the machine:
+
+	nmap -sS -O 192.168.1.2
+
+
+
+To scan only for certain ports:
+
+
+	nmap -sS -O 192.168.1.2 -p 1-139
+
+
+or, simply:
+
+	nmap 192.168.1.2 -p 1-139
+
+
+ping
+----
+To check whether a particular host is alive and to confirm network
+connectivity:
+
+	ping 192.168.1.2
+
+
+
+tcpdump
+-------
+You must be root to run tcpdump.
+To check whether anyone is using the LAN on a particular interface, 
+eth0:
+
+	tcpdump -i eth0
+
+
+The output may be too fast to read. To limit to 3 packets:
+
+	tcpdump -c 3 -i eth0
+
+To filter only port 80 packets:
+
+	
+	tcpdump -c 3 -i eth0 port 80
+
+
+To dump the bytes and decode to ASCII:
+
+	tcpdump -c 1  -X -i eth0 port 23
+
+The above will dump 1 packet of interface eth0 filtered based on port 23.
+It will dump the hex and decode them to ASCII as well.
+
+
+w or who
+-------
+To find out who is logged in:
+
+	who
+
+or
+	w
+
+
+whois
+-----
+To find which ISP owns a particular IP address:
+
+	whois -h whois.arin.net <IP address>
+	whois -h whois.apnic.net <IP address>
+	whois -h whois.ripe.net <IP address>
+
+
+arin is for US, apnic for Asia and ripe is for Europe.
+
+

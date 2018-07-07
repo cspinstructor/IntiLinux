@@ -1,0 +1,76 @@
+LAPLINK
+-------
+
+Objective
+---------
+To connect  two linux box using a null modem cable.
+In this case we will connect a Notebook to a Desktop
+using the Serial Port.
+
+
+1.  SETTING UP THE NOTEBOOK
+Assume Notebook is the server. Change to directory /etc/ppp and
+create a file called "options.ttyS0" with the following contents:
+
+asyncmap 0
+crtscts
+local
+silent
+192.168.1.172:192.168.1.8
+115200
+
+Another file called "options" should have only one line:
+
+lock
+
+Also edit the /etc/hosts file by adding:
+
+192.168.1.172	inux
+192.168.1.8	ion
+
+inux is the notebook. ion is the desktop.
+
+
+2.  SETTING UP THE DESKTOP
+Assume Desktop PC is the client. Change to directory /etc/ppp and
+create a file called "options.ttyS1" with the following contents:
+
+115200
+crtscts
+local
+
+The "options" file should also have only one line:
+
+lock
+
+Create the same entries in /etc/hosts as was done for the 
+notebook.
+
+
+3.  CONNECTING THE LAPLINK CABLE
+The Laplink cable has DB25 and DB9 female connectors on both ends.
+Connect the DB9 into the Notebook and the other end, connect 
+DB25 to the Desktop PC.  The notebook listens on /dev/ttyS0 whilst
+the desktop pc sends on /dev/ttyS1.
+
+
+4.  STARTING THE pppd programs
+On the notebook, run the command:
+
+	/usr/sbin/pppd /dev/ttyS0 nodetach
+
+On the desktop, pc run the command:
+
+	/usr/sbin/pppd /dev/ttyS1 nodetach
+
+The notebook must listen first, before the desktop connects.
+
+
+5.  HOW USE THE PPP CONNECTION
+ping each other to test connectivity.
+telnet each other, ftp, etc...
+
+
+REFERENCES
+
+Atsma, W.J. (2001). Serial Laplink HOWTO. RedHat 7.2 Documentation.

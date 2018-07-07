@@ -1,0 +1,161 @@
+ALIEN
+=====
+
+Objective
+---------
+Using alien to convert *.rpm to *.deb and installing it
+on lindows v 2.0.
+The rpm's are j2re and openoffice packages.
+
+
+What is alien?
+--------------
+A tool to convert .rpm to .deb packages.
+rpm is Redhat package manager format, 
+deb is debian package format.
+
+
+What to install
+---------------
+We are going to install this on lindows v2.0:
+
+	/usr/local/j2re-1_4_1_03-fcs-linux-i586.rpm
+	
+Note that lindows is Debian-derivative.
+
+Next, we will install the 3 openoffice packages:
+
+
+	openoffice-1.0.1-8.i386.rpm
+	openoffice-i18n-1.0.1-8.i386.rpm
+	openoffice-libs-1.0.1-8.i386.rpm
+
+
+
+Installing alien
+----------------
+We need alien, to convert the rpm to deb.
+
+Therefore, first, install alien:
+
+	apt-get install alien
+
+
+
+
+
+
+
+
+Installing jre
+~~~~~~~~~~~~~~
+
+Converting rpm to deb
+---------------------
+
+Then, convert the rpm to deb:
+
+	alien j2re-1_4_1_03-fcs-linux-i586.rpm
+
+After conversion, the original rpm is untouched, but a new
+deb has been created:
+
+	
+	/usr/local/j2re_1.4.1_03-1_i386.deb
+
+
+
+Installing the deb
+------------------
+Then, install the deb package:
+
+	dpkg -i	j2re_1.4.1_03-1_i386.deb
+
+It installs like an rpm.
+
+
+
+Where did it install?
+---------------------
+To find out where did the deb install:
+
+	dpkg -p j2re
+
+
+There will be a long list, but you will notice this line
+repeatedly:
+
+	/usr/java.....
+
+
+
+
+
+
+Installing openoffice
+~~~~~~~~~~~~~~~~~~~~~
+
+Converting rpm's to deb's
+-------------------------
+Copy the openoffice rpm's from Redhat 8's CD2 to
+/usr/local/packages.
+
+Change to the directory where the openoffice rpm's are:
+
+	cd /usr/local/packages
+
+Then, convert all three rpm's to deb:
+
+	alien openoffice*
+
+
+After conversion, we get:
+
+	
+	openoffice-i18n_1.0.1-9_i386.deb
+	openoffice-libs_1.0.1-9_i386.deb
+	openoffice_1.0.1-9_i386.deb
+
+
+To install without facing dependencies problems, install all
+simultaneously:
+
+	dpkg --install openoffice*
+
+
+
+Errors
+------
+The 3 openoffice packages installed without any problems.
+But when i try to run openoffice:
+
+	oopenoffice
+
+It complains cannot find:
+
+	libstdc++...
+
+So, i inserted Redhat CD1, copied, libstdc++-3.2-7.i386.rpm to
+/usr/local/packages, then converted it to deb:
+
+	alien libstdc++-3.2-7.i386.rpm
+
+and got this:
+
+	libstdc++_3.2-8_i386.deb
+
+
+Then, i installed it:
+
+	dpkg -i libstdc++_3.2-8_i386.deb
+
+It installed without a hitch.
+
+Then, i tried running openoffice again:
+
+	ooffice
+
+This time, it didn't complain about libstdc++, but
+complained about other libraries.
+
+At this point, i stopped.

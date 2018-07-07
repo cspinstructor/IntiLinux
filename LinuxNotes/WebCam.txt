@@ -1,0 +1,800 @@
+WEB CAM
+=======
+
+Objective
+---------
+To set up a system for remote surveillance using a webcam.
+The WebCam will haves a 90 degrees horizontal rotation 
+capability by remote control via the Internet.
+
+
+System Architecture
+-------------------
+The architecture of the system is shown below:
+
+                                  Linux
+	WebCam <--> Driver <--> WebServer <--> Internet
+				FTP server
+				   and
+				 Rotator
+
+         	Fig. A - Remote Surveillance System
+		-----------------------------------
+
+The WebCam can be any web cam, not necessarily Linux
+compatible. Getting a web cam that runs on Linux is a tricky
+business. It involves a lot of headache of looking for the
+driver, downloading and installing the driver and making it
+work with the USB port, etc.
+
+It is much easier to find a WebCam that runs on Microsoft
+Windows.  In the setup in Fig A, the WebCam is installed on
+WindowsME with the appropriate driver. In this setup, we used
+a webcam called PressCam.
+
+In Fig. A above, the Driver system runs on WinME.  The 
+WebServer is Apache running on Linux and the Rotator is simply 
+the CD-ROM drive of the Linux Box.  
+
+
+
+
+Rotator
+-------
+We use the CD-ROM drive to physically turn the WebCam.
+The WebCam should be mounted on a camera tripod and placed 
+near the CD-ROM drive. Fig B shows the setup.
+
+	
+	                 
+	   CDROM |      
+           drive |  |
+		    |WebCam		 
+
+
+	Fig B.  Rotator and Web Cam physical setup
+	------------------------------------------
+
+The Web Cam is mounted on a tripod and placed near the
+front of the CDROM drive. When the CDROM drive tray is ejected,
+it pushes the the handle of the tripod which turns the
+WebCam about 90 degrees. Fig C below shows this.
+
+	CDROM ----->| 
+        drive ----->| / 
+		     / Webcam
+			 
+
+	Fig C. WebCam rotated when CD-ROM tray ejects
+	---------------------------------------------                           
+
+As a result the WebCam can capture another part of the room.                   
+A rubber band attaches the tripod handle to the system unit
+in which the CDROM drive is housed. So that, when the CDROM
+tray is is closed, the rubber band will pull the tripod
+handle and rotate the WebCam back to its original position.	 
+The rubber band attachment is shown in Fig D below.
+
+	
+          CDROM|
+          drive|
+		     |	
+         rubber band |
+      ---------------|	     
+                     | WebCam
+		     |
+	             |    
+
+	Fig D.  Rubber band attachment
+        ------------------------------
+
+
+
+Fig E below shows how the rubber band will stretch when the
+CD-ROM drive ejects. When the CD-ROM tray closes, the stretched
+rubber band will pull the tripod lever and cause the WebCam
+to return to its original position. We could have achieved the
+same thing using an electric motor system attached to the serial
+or parallel I/O port, but that would incur unnecessary effort
+and complexity in having to build an electronic interface and
+relay to activate a motor. Using the CD-ROM to physically
+turn the WebCam can be done by anyone and much, much simpler
+to implement.
+
+
+
+           CDROM ------------->|   
+           drive ------------->| /
+		               /	
+         rubber band         /
+      ---------------------/	     
+                         /  WebCam
+		       /
+	                 
+
+	Fig E.  Rubber band stretches when CDROM drive ejects 
+        -----------------------------------------------------
+
+
+
+
+
+
+Driver System
+--------------
+The driver system consists of WindowsME and runs a program 
+called wcapture.exe which is available from:
+
+    http://atomic.digitalcreation.net/Downloads/files/wcapture/
+
+This program can detect the presence of any WebCam which has
+been installed. Set it to capture a frame every 10 seconds.
+Set the picture name as "pic.jpg".  Then set it to FTP to the
+Linux WebServer in Fig A and to save it into a file called
+public_html.  Note that you have to plug in the Presscam Webcam
+into the USB port beforehand, install the driver and make sure
+that WindowsME can detect the Presscam.
+
+
+FTP Server
+----------
+You need to start the FTP server as shown in Fig A so that
+the WebCam Driver System (WinME) can FTP and transfer the
+pic.jpg file to the user's public_html directory. To start
+the FTP Server, as root:
+
+	chkconfig wu-ftpd on
+
+To stop it:
+
+	chkconfig wu-ftpd off
+
+
+
+WebServer
+---------
+You will need to create a public_html folder within your home
+account.  Assume your name is aeryn, then, you should have
+this folder:
+
+	/home/aeryn/public_html
+	
+Set the correct permission for aeryn as follows:
+
+	chmod 711 /home/aeryn
+
+and for public_html:
+
+	chmod 755 /home/aeryn/public_html
+
+
+You will also need to create a cgi-bin folder
+within public_html:
+
+	/home/aeryn/public_html/cgi-bin
+
+and set it with the following permission:
+
+	chmod 755 cgi-bin
+
+Before any script in cgi-bin can be executed, you
+need to install cgiwrap (see the chapter on WebServer
+on how to do this).
+
+
+You need to have Apache running:
+
+	/etc/rc.d/init.d/httpd start
+
+Then create an index.html page with this code:
+
+---------------------------------------------------
+<html>
+<head>
+<meta http-equiv="Refresh" Content="10">
+<title>WebCam</title>
+</head>
+
+<body>
+<a href=cgi-bin/left.sh>Left</a>
+&nbsp|&nbsp
+<a href=cgi-bin/right.sh>Right</a>
+<br>
+<SCRIPT>
+document.write(Date()+".")
+</SCRIPT>
+<br>
+<img src=pic.jpg>
+</body>
+</html>
+-----------------------------------------------------
+
+
+Note the following tag:
+
+	<meta http-equiv="Refresh" Content="10">
+
+This will cause the webpage to refetch itself every 10
+seconds.
+
+There is also "left.sh" and "right.sh" shell scripts.
+Both these scripts should be in this folder:
+
+	/home/aeryn/public_html/cgi-bin
+
+The javascript
+
+	document.write(Date()+".")
+
+puts a time-stamp on the webpage.
+
+
+
+Rotator scripts
+----------------
+To eject the CD-ROM tray, we use right.sh:
+
+
+	#!/bin/sh
+	echo Content-type:text/plain
+	echo
+	eject
+	echo Click on browser\'s back button
+
+
+To close the CD-ROM tray, we use left.sh:
+
+
+	#!/bin/sh
+	echo Content-type:text/plain
+	echo
+	eject -t
+	echo Click on browser\'s back button
+
+Note that you need to 
+
+	echo Content-type:text/plain
+
+or else the  client WebBrowser will see an "Internal
+Server Error" message.
+
+
+Connecting to the WebServer
+----------------------------
+Any client who has the IP address of the WebServer can
+connect using any WebBrowser, eg,
+
+	http://192.168.0.1/~aeryn/
+
+And the webpage will display as follows:
+
+	Left  |  Right
+	[ timestamp ]
+	< pic.jpg >
+
+The "Right" hyperlink will call the script:
+
+	http://192.168.0.1/~aeryn/cgi-bin/right.sh
+
+and cause the CD-ROM tray to eject, thus causing the WebCam
+to rotate to the right.
+
+and the "Left" hyperlink will call the script:
+
+	http://192.168.0.1/~aeryn/cgi-bin/left.sh
+
+and cause the CD-ROM tray to close, and the stretched rubber
+band will pull the tripod lever in, thus rotating the WebCam
+to its original position.
+
+
+Getting the WebServer's IP
+---------------------------
+If your webserver is connected to the Internet with a static
+IP, then there is no problem connecting to the webserver from
+the Internet to see the WebCam pics. The problem arises when
+you use dynamic IP's. To solve this problem, we need to come
+up with a system whereby the Linux Server will detect its
+IP address and send it to a remote Linux Server which has a
+static IP address. For purposes of illustration, let's assume
+an architecture as shown in Fig. F below:
+
+
+WebCam                                    Remote
+  +       <---------> Internet <--------> Linux
+Linux                    ^                Server  
+Server			 |	          (Fixed IP)
+(Dynamic IP)             |
+  		         |	      Client	
+			 |----------> Web 
+ 				      Browser
+			                 
+
+   Fig F. Connecting to the WebCam Server 
+   --------------------------------------
+
+
+In Fig F above, The WebCam-Linux will send its IP to the
+Remote-Linux.  The Client will connect to Remote-Linux to get
+the IP and use it to connect to WebCam-Linux.
+
+The WebCam Linux makes use of this script called 
+GetAndPost.sh: 
+
+---------------------------------------------------------  
+#!/bin/sh
+/sbin/ifconfig > tmp.txt
+ 
+if grep "P-t-P:" tmp.txt > ip.txt
+then
+  str=`cat ip.txt`
+  w3c http://202.188.199.5/~aeryn/cgi-bin/update.sh?$str
+fi
+----------------------------------------------------------
+
+
+What the script does is to ifconfig and save its output to
+tmp.txt. It then greps the line containing ppp0 and saves
+this to ip.txt. Then, it cats the ip.txt file and assign it
+as a string to the variable "str". Then, it uses the program
+w3c to GET the str to the update.sh cgi script on the 
+Remote-Linux Server which we assume, has the IP address
+202.188.199.5.  Note that we could have used the domain name
+but instead, we chose to use the IP so that it is faster, since
+there is no need to resolve the domain name.
+
+The "w3c" is the command line http program.  We use the GET
+directive. There are 2 ways to send data to cgi scripts on
+web servers, either, POST or GET. In this case, we use GET.
+The usage is to append a "?" at the end of the http url:
+
+	...update.sh?
+
+followed by the data, in this case the string that was assigned
+to the variable "str":
+
+	...update.sh?str
+
+
+We need this script to be run periodically in case of changes
+in IP. Use crontab -e as follows:
+
+	0-59 * * * * /home/aeryn/public_html/GetAndPost.sh
+
+It will run the GetAndPost.sh script every minute. 
+
+
+On the Remote Server, the update.sh script is as follows:
+
+------------------------------------------------------
+#!/bin/sh
+# Will receive the w3c post message from WebCam-Linux and
+# save it to file IP.txt 
+echo Content-type: text/plain
+echo
+echo "Instructions:" > ../tmp.txt
+echo "--------------" >> ../tmp.txt
+echo "Use the first IP below. Add \"/~aeryn/\" to the back " >> ../tmp.txt
+echo >> ../tmp.txt
+echo >> ../tmp.txt
+date >> ../tmp.txt
+echo $* >> ../tmp.txt
+tr -d "\\\?" < ../tmp.txt > ../IP.txt
+--------------------------------------------------------
+
+
+The Client Web Browser will retrieve it by using this URL:
+
+	http://202.188.199.5/~aeryn/IP.txt
+
+where IP.txt contains the WebCam-Linux's IP address,
+and aeryn also has an account on this Remote-Linux server.
+The Client Web Browser then connects to WebCam-Linux
+as follows:
+
+	http://161.123.234.3/~aeryn/
+
+and will see the pics which will autoupdate every 10 secs.
+
+
+
+
+A SIMPLER ALTERNTIVE
+--------------------
+
+Put the webcam in a corner of the room, so that, with only
+a 90 degree angle,  it can capture the entire room, as 
+shown in Fig G below:
+
+
+	-------------------------
+	|			|
+	|			|
+	|			|
+	|			|
+	|			|	
+	|			|
+	|			|
+	|			|
+	|			|
+	|			|
+	|			|
+	|			|
+	|			|
+	|			|
+	|     			|
+	|     /  		|
+	|    /			|
+	|   /			|
+	| 90		 	|
+	| degrees 		|
+	------------------------
+
+
+	Fig G. To capture entire room
+	-----------------------------
+
+
+As can be seen in Fig G. The corner is a strategic location
+to place a web cam.  You only need 90 degree angle to capture
+the entire room.  No need for rotator.
+
+
+The simplified index.html page is shown below:
+
+
+
+<html>
+<head>
+<meta http-equiv="Refresh" Content="10">
+<title>Adrian</title>
+</head>
+<body>
+<p>
+Dec 3 15:25
+<p><a href="cgi-bin/capture.cgi"> Capture</a>
+<p> <img src=pic.jpg> </body></html>
+
+
+
+The output is as below in Fig H below:
+	
+	----------------------------------
+	| Dec 3 15.33			 |
+	|				 |
+	| Capture			 |
+	| -------			 |
+	|				 |
+	|				 |
+  	|	 [  pic.jpg  ]		 |
+	|				 |
+	|				 |
+	|				 |
+	|				 |
+	|--------------------------------
+
+
+ 	Fig H.  The simpler index.hmtl
+	------------------------------
+
+
+Notice that the timestamp is for real. It is
+the actual date and time of the pic.jpg file
+obtained by scripting the this command:
+
+	ls -l pic.jpg
+
+The "index.html" above is dynamically generated
+by crontab every minute using this script called
+CheckPic.sh:
+
+
+.........................................................
+#!/bin/sh
+echo '<html>
+<head>
+<meta http-equiv="Refresh" Content="10">
+<title>Adrian</title>
+</head>
+<body>
+<p>' > /home/paul/public_html/index.html
+
+
+/bin/ls -l /home/paul/public_html/pic.jpg >  temp.txt
+
+awk  -F " " '{print $6 " " $7 " " $8 }' temp.txt 
+      >> /home/paul/public_html/index.html
+
+echo '<p><a href="cgi-bin/capture.cgi"> Capture</a>' 
+      >> /home/paul/public_html/index.html
+echo '<p> <img src=pic.jpg> </body></html>' 
+      >> /home/paul/public_html/index.html
+...........................................................
+
+
+
+Because ls -l will print a long line, the awk command
+is to filter out the month, date, and time fields only,
+being the 6th, 7th and 8th fields respectively.
+
+
+
+The crontab -e is as follows:
+
+
+0-59 * * * * /home/paul/public_html/CheckPic.sh
+0 0-23 * * * cat /dev/null > /var/mail/paul
+
+
+
+Note that CheckPic.sh script only updates the time
+stamp.  The pic.jpg is updated every 10 seconds as
+before. This because the index.html page's img src
+points to pic.jpg.
+
+
+
+We went through all this trouble to get the genuine
+timestamp via ls -l so that we can know whether
+the pic.jpg picture is really current.  In the
+earlier implementation, the timestamp which is 
+generated by javascript is not the ls -l of pic.jpg,
+and as such we would not know if the pic.jpg was current.
+since the timestamp will happily tick on even though the
+pic.jpg has stopped updating.
+
+
+Notice also that we have added a new feature:
+
+	Capture
+
+When the user clicks on this link, it will
+capture a still picture and give the following
+output as in Fig I:
+
+	
+	----------------------------------
+	| CAPTURED PICTURE: 153832.jpg	 |
+	|				 |
+	|				 |
+	| 				 |
+	|				 |
+	|				 |
+  	|	 [  pic.jpg  ]		 |
+	|				 |
+	|To save on your hard disk, right|
+	|click the above pic. Then click |
+	|save as... To go back to the web|
+	|cam, click on browser back	 |
+	|button.			 |
+	|--------------------------------
+
+
+ 	Fig I.  The captured picture
+	-----------------------------
+
+
+The capture.cgi script is as shown below:
+
+...........................................................
+#!/bin/sh
+name=`/bin/date +%H%M%S` 
+/bin/cp /home/paul/public_html/pic.jpg 
+        /home/paul/public_html/$name.jpg
+echo Content-type:text/html
+echo
+echo '<html><head><title>Captured</title></head><body><pre>' 
+
+echo CAPTURED PICTURE:  $name.jpg 
+echo ----------------------------
+echo
+echo  '<img src=../pic.jpg>'
+echo
+echo
+echo To save on your hard disk, right click the above picture 
+echo then click \"Save As...\"
+echo
+echo To go back to the web-cam, click on your browser\'s back button
+echo '</pre></body></html>'
+..................................................................
+
+
+
+We implement capture simply by:
+
+	cp pic.jpg timestamp.jpg
+
+Since timestamp is continuously ticking on, we can be assured
+that each captured pic has a different name.
+
+
+
+
+Sound Alarm Remotely
+--------------------
+This added feature enables user to click on Sound Alarm hyperlink
+to sound the alarm at home, or, to click on Stop Alarm to stop
+the alarm. If the alarm is sounding, the Webpage will display
+an animated gif of a blinking light, to alert the user, in case he
+forgets that he had sounded the alarm, which could be a nuisance to
+the neighbours.
+
+
+The output is as below in Fig H below:
+	
+	----------------------------------
+	| Dec 3 15.33			 |
+	|				 |
+	| Capture|SoundAlarm|StopAlarm   |
+	| ------- ---------- --------	 |
+	|				 |
+	|				 |
+  	|	 [  pic.jpg  ]		 |
+	|				 |
+	|				 |
+	|				 |
+	|				 |
+	|--------------------------------
+
+
+ 	Fig J.  Additional Alarm feature
+	--------------------------------
+
+
+
+The html code for Fig J is shown below:
+
+..............................................
+<html>
+<head>
+<meta http-equiv="Refresh" Content="10">
+<title>Adrian</title>
+</head>
+<body>
+<p>
+Dec 21 15:44
+<p><a href="cgi-bin/capture.cgi"> Capture</a>
+&nbsp|&nbsp<a href="cgi-bin/soundalarm.cgi"> Sound Alarm</a>
+&nbsp|&nbsp<a href="cgi-bin/stopalarm.cgi"> Stop Alarm</a>
+<p>[N-Park Mgt Office tel: 6582280]
+<p> <img src=pic.jpg> </body></html>
+.............................................
+
+
+It is also autogenerated by this revised CheckPic.sh
+script via cron:
+
+
+[CheckPic.sh]
+.............................................................................
+#!/bin/sh
+# Generates index.html
+echo '<html>
+<head>
+<meta http-equiv="Refresh" Content="10">
+<title>Adrian</title>
+</head>
+<body>
+<p>' > /home/paul/public_html/index.html
+
+
+/bin/ls -l /home/paul/public_html/pic.jpg >  temp.txt
+
+awk  -F " " '{print $6 " " $7 " " $8 }' temp.txt 
+	>> /home/paul/public_html/index.html
+echo
+echo '<p><a href="cgi-bin/capture.cgi"> Capture</a>' 
+	>> /home/paul/public_html/index.html
+echo '&nbsp|&nbsp<a href="cgi-bin/soundalarm.cgi"> Sound Alarm</a>' 
+	>> /home/paul/public_html/index.html
+echo '&nbsp|&nbsp<a href="cgi-bin/stopalarm.cgi"> Stop Alarm</a>' 
+	>> /home/paul/public_html/index.html
+
+if [ -f /home/paul/public_html/Alarm ]
+then
+echo '<p> <img src=ball.gif>ALARM!' 
+	>> /home/paul/public_html/index.html
+fi
+
+echo  '<p>[N-Park Mgt Office tel: 6582280]'
+	>> /home/paul/public_html/index.html
+
+echo '<p> <img src=pic.jpg> </body></html>' 
+	>> /home/paul/public_html/index.html
+
+.............................................................................
+
+
+
+Note that the additional cgi scripts are:
+
+	soundalarm.cgi 
+	stopalarm.cgi
+
+
+These scripts sound and stop the alarm as their name suggests:
+
+[soundalarm.cgi]
+..................................
+
+#!/bin/sh
+
+echo Content-type:text/html
+echo
+echo "Alarm is sounding, click back button on browser to go back to Web cam"
+/usr/bin/eject
+/bin/touch ../Alarm
+/home/paul/public_html/CheckPic.sh
+........................................
+
+
+[stopalarm.cgi]
+......................................
+
+#!/bin/sh
+
+echo Content-type:text/html
+echo
+echo "Alarm is stopped, click back button on browser to go back to Web cam"
+/usr/bin/eject -t 
+/bin/rm -f ../Alarm
+/home/paul/public_html/CheckPic.sh
+.........................................
+
+
+When the cd-rom ejects, it pushes against the mechanical setup that sounds
+the alarm. 
+
+                           wire
+	-------]\<-------------------------
+	 CD-ROM	 \			  |
+	 tray	  \			  |	
+		   \Metal bar		  |	
+  		    \			  |
+	             \			Alarm
+		      \                 device
+	       Metal o \		  |
+		bar  ^	\		  |
+                     |         wire	  |	
+                     |--------------------- 
+                          
+
+
+		Fig K. Physical setup - default no sound
+		----------------------------------------
+
+
+In Fig K above, the Alarm device originally consists of 2 parts, ie,
+the main unit and a magnet.  If the magnet is close to the main part,
+then, the alarm does not sound, and vice versa.  However, we have
+modified the device. Two wires emanate from it. So long as the wires 
+touch each other, no alarm and vice versa.  No need for the magnet.
+
+The metal bar is hung from the CD-ROM tray and contacts another metal
+bar perpendicular to it. Each metal bar is connected to each of the
+2 wires of the Alarm device.
+
+
+ 				 wire
+	------------------]|<----------------
+         ejected	   |		    |		
+  	 CD-ROM		   | Metal	    |
+	 tray	  	   | bar	    |	
+		   	   |		    |
+  		    	   |		 Alarm   
+	                   |             device
+		           |		    |
+	       Metal o     | 		    |	
+		bar  ^	   |	            |
+		     |            wire      |
+	 	     |----------------------	
+	
+		Fig L. Ejected CD-ROM tray - alarm sounds
+		-----------------------------------------
+
+
+In Fig L above, when the CD-ROM tray ejects, the hanging metal bar is
+moved away from the horizontal metal bar and this triggers the Alarm.
+
+Hence the scripts soundalarm.cgi and stopalarm.cgi merely ejects or
+closes the CD-ROM tray.

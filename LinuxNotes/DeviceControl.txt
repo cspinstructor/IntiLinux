@@ -1,0 +1,573 @@
+DEVICE CONTROL
+==============
+
+Objective
+---------
+[1] To control hardware eg, CD-ROM and soundcard.
+[2] To control the Serial Port.
+
+
+
+1. CONTROLLING THE CD-ROM DRIVE
+
+The virtual device that represent cd-roms is /dev/cdrom.
+To control the cd-rom, we open the file /dev/cdrom and
+manipulate it, like a file.  This kind of high-level 
+abstraction of a device is common for modern operating
+systems, eg, unix and win32.
+
+
+1.1 Ejecting CD-ROM
+
+You can eject the cdrom tray from shell using:
+
+	eject
+
+and close the tray:
+
+	eject -t
+
+However, in this chapter we will look at writing C
+programs to do the same thing.
+
+The program eject.c, below, is modified from Mitchell et al.(2001) 
+p 144. When run, it ejects the cdrom. Run it by typing the
+following command: 
+
+	./eject /dev/cdrom
+
+//eject.c  - paul chin
+#include <fcntl.h>
+#include <linux/cdrom.h>
+#include <sys/ioctl.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
+
+int main (int argc, char* argv[])
+{
+  int fd;
+  /* Open a file descriptor to the device 
+     specified on the command line.  */
+  fd = open (argv[1], O_RDONLY | O_NONBLOCK);
+  /* Eject the CD-ROM.  */
+  ioctl(fd, CDROMEJECT);
+  close(fd);
+  
+  return 0;
+}
+
+
+
+1.2  Closing the CD-ROM tray
+
+This next program close.c, is also adapted from Mitchell(2001)
+p 144. It closes the cdrom tray, to run 
+
+	./close /dev/cdrom
+
+//close.c - paul chin
+#include <fcntl.h>
+#include <linux/cdrom.h>
+#include <sys/ioctl.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
+
+int main (int argc, char* argv[])
+{
+  int fd;
+  /* Open a file descriptor to the device
+     specified on the command line. */
+  fd = open (argv[1], O_RDONLY | O_NONBLOCK);
+  /* Eject the CD-ROM.  */
+  ioctl(fd, CDROMCLOSETRAY);
+  close(fd);
+  
+  return 0;
+}
+
+For a list of cd-rom controls, see 
+
+	/usr/include/linux/cdrom.h
+
+Be sure to open() with O_RDONLY | O_NONBLOCK.  If O_RDONLY,
+the program can either eject or close, cannot do both.
+
+According to Hart(2001) at p 24, the | means bitwise 'or', 
+the effect is to open() with both option O_RDONLY and O_NONBLOCK, 
+it doesn't mean either O_RDONLY or O_NONBLOCK
+
+According to Mitchel et al. (2001) p 282, a device file can
+be opened for
+
+	O_RDONLY,  read only
+	O_WRONLY,  write only
+	O_RDWR,    read-write
+
+
+
+2.  CONTROLLING THE SOUNDCARD 
+
+According to Wall(2000) p 278, the soundcard 
+devices are also represented as files, eg,
+ 
+	 /dev/dsp  and  /dev/audio. 
+
+Other devices to control sound are:
+
+	/dev/mixer, /dev/sequencer and /dev/midi
+ 
+To control them we manipulate them as files.
+
+
+2.1  Sending a sound file to a sound device
+
+To find soundfiles, 
+
+	find / -name "*.au"
+	find / -name "*.wav"
+
+Some of them are in
+
+	/usr/lib/xemacs/xemacs-packages/etc/sounds
+
+eg. to send a sound file,
+
+	cat bark.wav > /dev/dsp, or,
+	cat bark.wav > /dev/audio
+
+The sound will be played.
+
+The list of controls are found in 
+
+	/usr/include/sys/soundcard.h
+
+which indirectly includes
+
+	/usr/include/linux/soundcard.h
+
+	
+2.2  Adjusting volume
+
+The program volume_control.c, below, adapted from
+Wall(2000) p 281, controls the volume. 
+
+// volume_control.c - Paul Chin
+#include <unistd.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <sys/ioctl.h>
+#include <fcntl.h>
+#include <sys/soundcard.h>
+
+main(int argc, char *argv[])
+{
+	int fd;
+	int vol = atoi(argv[1]);
+
+  	fd = open ("/dev/mixer", O_RDWR);
+	if((ioctl(fd,SOUND_MIXER_WRITE_VOLUME, &vol)) < 0)
+	{
+		perror("Volume");
+	}
+	else
+	{
+		puts("OK");
+	}
+	close(fd);
+	return 0;
+}
+
+
+To set volume at 50%,
+
+	./volume_control 50
+
+then play a sound file
+
+	cat ding.wav > /dev/dsp
+
+To set volume at 100%,
+
+	./volume_control 100, sets it at 100%
+
+then play a sound file
+
+	cat ding.wav > /dev/dsp
+
+
+
+2.3  RECORDING SOUNDS
+
+To record sounds, attach a microphone to the soundcard and do this:
+
+	dd bs=8k count=4 < /dev/audio > sample.wav
+
+The above records 4 seconds of audio from the microphone
+
+Note that if your microphone is a stereo male jack you need to
+insert it half-way only.  The female connector is mono.
+
+If the mic recording is too soft. Start kmix and set the volume
+for mic to maximum.  For doing all of the above, you need to be 
+root.
+
+
+
+3. CONTROLLING THE SERIAL PORT
+
+Serial ports are devices known as /dev/ttyS0, /dev/ttyS1, 
+/dev/ttyS2, etc. Typically, /dev/ttyS0 is attached with a
+mouse and /dev/ttyS1 is attached with a modem. Serial ports
+are female 25 pin or 9 pin connectors. The cable between
+the PC (DTE, Data Terminal Equipment) and Modem 
+(DCE, Data Communication Equipment) is straight thru cable.
+
+
+3.1 Sending bytes to serial port
+
+According to Lawyer, D.S. (2001) para 7.5.2, if the 
+serial ports have been configured correctly per setserial,
+then you may send some bytes out a port and try to detect 
+which connector (if any) it's coming out of.  One way to 
+send such a signal is to copy a long text file to the port 
+using a command like: 
+	
+	cp my_file_name  /dev/ttyS1.  
+or,
+	cp /dev/full /dev/ttyS1
+
+For notebooks,
+
+	cp /dev/full /dev/ttyS0
+
+A voltmeter connected to the DTR pin will display positive as 
+soon as you give the copy command.
+
+The transmit pin should go  from several volts negative to a voltage
+fluctuating around zero after you start sending the bytes.  If it
+doesn't (but the DTR went positive) then you've got the right port but
+it's blocked from sending.  This may be due to a wrong IRQ, -clocal
+being set, etc.  The command "stty -F /dev/ttyS1 -a" should show
+clocal (and not -clocal).  If not, change it to clocal.
+
+
+3.2 Setting up a Serial Port Cable for Experiments
+
+This section will detail the steps to modify a modem cable
+for use in experimenting with a voltmeter, LED and speaker,
+and possibly many other devices as well.
+The modified modem cable will be connected to the serial port.
+If Desktop, use 25 pin male connector. If Notebook, use 9 pin male 
+connector. 
+
+If you look at the modem cable male connector (25 pin), this is
+how it is numbered:
+
+ .----------------------------------------------.
+  \   1  2  3  4  5  6  7  8  9  10  11  12  13 /
+    \  14 15 16 17 18 19 20 21 22  23  24  25  /
+      ----------------------------------------
+
+
+Lawyer, D.S. (2001) at para 16, describes the meaning of the 
+pins as below:
+
+            (--> direction is out of PC)
+            (Note DCD is sometimes labeled CD)
+
+  Pin# Pin# Acronym Full-Name  Direction  What-it-May-Do/Mean
+  9     25
+ -pin   -pin
+  3      2   TxD  Transmit Data     -> Transmits bytes out of PC
+  2      3   RxD  Receive Data      <- Receives bytes into PC
+  7      4   RTS  Request To Send   -> RTS/CTS flow control
+  8      5   CTS  Clear To Send     <- RTS/CTS flow control
+  6      6   DSR  Data Set Ready    <- I'm ready to communicate
+  4     20   DTR  Data Terminal Ready->I'm ready to communicate
+  1      8   DCD  Data Carrier Detect<-Modem connected to another
+  9     22   RI   Ring Indicator    <- Telephone line ringing
+  5      7   SG   Signal Ground
+
+
+Only 3 of the 9 pins have a fixed assignment: transmit, receive
+and signal ground.  This is fixed by the hardware and you can't
+change it. But the other signal lines are controlled by software
+and may do (and mean) almost anything at all.  However they can 
+only be in one of two states: asserted (+12 volts) or negated 
+(-12 volts).  Asserted is "on"and negated is "off".  For example,
+Linux software may command that DTR be negated and the hardware
+only carries out this command and puts -12 volts on the DTR pin. 
+A modem (or other device) that receives this DTR signal may do
+various things.  If a modem has been configured a certain way it 
+will hang up the telephone line when DTR is negated.In other 
+cases it may ignore this signal or do something else when DTR
+is negated (turned off).
+
+It's like this for all the 6 signal lines.  The hardware only
+sends and receives the signals, but what action (if any) they 
+perform is up to the Linux software and the configuration/design 
+of devices that you connect to the serial port.  However, most
+pins have certain functions which they normally perform but 
+this may vary with the operating system and the device driver
+configuration.  Under Linux, one may modify the source code 
+to make these signal lines behave differently.
+
+
+3.3.  Modifying the modem cable
+
+Cut off one connector, exposing the 10 wires (including 1 
+uninsulated wire known as Protective Ground, which is grounded 
+to the connector itself.  Use a CD-ROM jewel case. Draw a 
+trapezium and number it as below:
+
+---------------------------------------------------
+|	Underside of CD jewel case					  |	
+|					          |
+|						  |
+|						  |	
+| 						  |
+|  						  |
+|.----------------------------------------------. |
+|  \   1  2  3  4  5  6  7  8  9  10  11  12  13 /|
+|    \  14 15 16 17 18 19 20 21 22  23  24  25  / |
+|      ----------------------------------------   |
+|--------------------------------------------------
+
+
+Then strip away the 9 wires. Look at the cut connector with the
+wires still soldered to it and match the color with the pin number.
+Using this color as a guide, use blue-tack and stick the respective
+wires to the respective numbers on the trapezium drawn above.
+
+Stick  protective ground wire (the uninsulated one) to the border
+of the trapezium. Protective ground wire is also known as wire 1 
+(Hamacher et al.,1996, p 376). Stick wire 2 to number 2, wire 3 
+to number 3, wire 4 to number 4, wire 5 to number 5, wire 6 to 
+number 6, wire 7 to number 7, wire 8 to number 8, wire 20 to 
+number 20 and finally wire 22 to number 22. 
+
+Secure the cable to the top of the jewel case with blue tack and
+cellophane tape. 
+
+Your serial port kit (SPK) is now ready for experiments.
+
+
+3.4  Doing some experiments with the serial port cable 
+
+Connect the other end of the SPK cable to another modem cable,
+or directly to the female connector of the PC. Use the 9 pin
+if it is a Notebook.
+
+
+3.5 Multimeter experiments
+
+Get a multimeter (or voltmeter) connect -ve probe to either
+wire 1, or, wire 7. Connect +ve probe to wire 20.
+The voltmeter will jump counterclockwise, indicatinng -12V.
+
+Then run this command:
+
+	cp /dev/full /dev/ttyS1
+or 
+	cp /dev/full /dev/ttyS0
+
+for notebook.
+
+The voltage will jump the opposite direction to +12V.
+
+
+3.6  LED experiments
+
+Use the same circuit as before, but now add an LED between
+the +ve probe of the multimeter and wire 20.
+
+The LED will not light. The multimeter will not jump counter
+clockwise. The LED as blocked the -ve voltage.
+
+Then run the same commands as above and the LED will light
+and the multimeter will jump to +12 V. The LED has rectified
+the voltage.
+ 
+Try the following:
+
+-ve to wire 7, or, wire 1, +ve to wire 2
+LED & multimeter responds when cp /dev/full /dev/ttyS1 is run
+indicating data transfer. 
+
+
+3.7  External speaker experiments
+
+Connect an external speaker between wire 7 (or wire 1)
+and wire 2. Then do : cp bark.wav /dev/ttyS1
+and the speaker will emit a sound (like the modem speaker 
+sound). The sound is louder when wire 7 is used instead of 
+wire 1. You won't get any sound if you connect the speaker 
+between any other 2 wires. Only wire 2 will give sound because 
+it is the transmit wire.
+ 
+
+3.8  External speaker and LED experiments
+
+Connect speaker between wire wire 2 and wire 7.
+Connect LED +ve lead to wire 20 and -ve lead to wire 7.
+
+Then send a sound file to the serial port:
+
+	cp bark.wav /dev/ttyS1
+
+The LED will light, indicating Ready To Send (wire 20)
+and the speaker will sound indicating data transmission on 
+wire 2.
+
+The following command will give the same results:
+
+	cp /dev/full /dev/ttyS1
+
+
+3.9  Sending SOS morse code signal to Serial Port
+
+In the next experiement a program will send 3 dashes, 3 dots 
+and 3 dashes to the speaker connected to wire 2 and wire 7 
+of the serial port. If the LED is also connected as per 3.2.5.3, 
+then the LED will light (but not blink), to indicate Ready To Send.
+
+The program is as follows:
+
+
+/* morse_code.c - sends SOS  to serial port - Paul Chin */
+
+#include <unistd.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <sys/ioctl.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <string.h>
+
+char *DASH = 
+"000000000000000000000000000000000000000000000000000000000000
+000000000000000000000000000000000000000000000000000000000000
+000000000000000000000000000000000000000000000000000000000000";
+
+char *DOT = "0000000000000000000000000000000000000000000000";
+
+int fd;
+unsigned long j;
+
+/* The pause between each dash, or, dot */
+void silent(int t)
+{
+	for(j=1; j<=10000000*t; j++);
+}
+
+void dash(void)
+{
+	write(fd, DASH, strlen(DASH));
+	silent(2);
+}
+
+void dot(void)
+{
+	write(fd, DOT, strlen(DOT));
+	silent(1);
+}
+
+
+main()
+{
+	int i;
+	unsigned long j;
+  	if( (fd=open ("/dev/ttyS1", O_RDWR)) == -1)
+	{	
+		perror("Opening /dev/ttyS1");
+		exit(1);
+	}
+	else
+	{
+		/* S O S */
+		for(i=1; i<=3; i++) dash();	
+		for(i=1; i<=3; i++) dot();
+		for(i=1; i<=3; i++) dash();	
+	}
+	close(fd);
+	return 0;
+}
+
+
+
+
+3.10  Cabling Between Serial Ports
+(Lawyer, D.S. (2001) para 16)
+
+A cable from a serial port always connects to another serial port.  An
+external modem or other device that connects to the serial port has a
+serial port built into it.  For modems, the cable is always straight
+thru: pin 2 goes to pin 2, etc.  The modem is said to be DCE (Data
+Communications Equipment) and the computer is said to be DTE (Data
+Terminal Equipment).  DCE stands for Data Communications Equipment 
+and not Data Circuit .... (Hamacher et al. 1996, p 376). Thus for 
+connecting DTE-to-DCE you use straight-thru cable.  For connecting
+DTE-to-DTE you must use a null-modem cable (also called a crossover 
+cable).  There are many ways to wire such cable (see examples in 
+Text-Terminal-HOWTO subsection: "Direct Cable Connection")
+
+There are good reasons why it works this way.  One reason is that the
+signals are unidirectional.  If pin 2 sends a signal out of it (but is
+unable to receive any signal) then obviously you can't connect it to
+pin 2 of the same type of device.  If you did, they would both send
+out signals on the same wire to each other but neither would be able
+to receive any signal.  There are two ways to deal with this
+situation.  One way is to have a two different types of equipment
+where pin 2 of the first type sends the signal to pin 2 of the second
+type (which receives the signal).  That's the way it's done when you
+connect a PC (DTE) to a modem (DCE).  There's a second way to do this
+without having two different types of equipment: Connect pin sending
+pin 2 to a receiving pin 3 on same type of equipment.  That's the way
+it's done when you connect 2 PCs together or a PC to a terminal (DTE-
+to-DTE).  The cable used for this is called a null-modem cable since
+it connects two PCs without use of a modem.  A null-modem cable may
+also be called a cross-over cable since the wires between pins 2 and 3
+cross over each other (if you draw them on a sheet of paper).  The
+above example is for a 25 pin connector but for a 9-pin connector the
+pin numbers are just the opposite.
+
+The serial pin designations were originally intended for connecting a
+dumb terminal to a modem.  The terminal was DTE (Data Terminal
+Equipment) and the modem was DCE (Data Communication Equipment).
+Today the PC is usually used as DTE instead of a terminal (but real
+terminals may still be used this way).  The names of the pins are the
+same on both DTE and DCE.  The words: "receive" and "transmit" are
+from the "point of view" of the PC (DTE).  The transmit pin from the
+PC transmits to the "transmit" pin of the modem (but actually the
+modem is receiving the data from this pin so from the point of view of
+the modem it would be a receive pin).
+
+The serial port was originally intended to be used for connecting DTE
+to DCE which makes cabling simple: just use a straight-thru cable.
+Thus when one connects a modem one seldom needs to worry about which
+pin is which.  But people wanted to connect DTE to DTE (for example a
+computer to a terminal) and various ways were found to do this by
+fabricating various types of special null-modem cables.  In this case
+what pin connects to what pin becomes significant.
+
+
+REFERENCES
+
+Mitchell, M., Oldham, J., and Samuel, A.(2001). 
+Advanced Linux Programming.
+Indianapolis : New Riders Publishing
+
+Hart, M. Johnson (2001). Win32 System Programming (2nd ed).
+Upper Saddle River : Addison-Wesley
+
+Wall, K. (2000). Linux Programming by Example.
+Indianapolis : Que
+
+Lawyer, D.S. (2001). Serial-HOWTO. 
+Red Hat Linux 7.2 Documentation
+
+Hamacher, V.C., Vranesic, Z.G., and Zaky, S.G. (1996).
+Computer Organization (4th ed). McGraw-Hill

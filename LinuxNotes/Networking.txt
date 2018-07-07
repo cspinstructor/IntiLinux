@@ -1,0 +1,374 @@
+Networking
+==========
+
+Updated: March 27, 2006 - How to determine which driver 
+			  refers to which NIC
+	 April 1, 2006 -  Setting up Windows 2000 with 2 NICs
+
+
+Objective
+---------
+To setup a Local Area Network consisting of  2 PCs and a hub:
+
+     192.168.0.1 <---> hub <---> 192.168.0.2
+
+	Fig A.  Local Area Network with 2 PCs and a hub
+
+
+
+How to determine which driver refers to which NIC
+-------------------------------------------------
+If you have two or more NICs, you can find out which driver is for
+which ethx (where x = 0,1,2...) uses which module driver as follows:
+
+	dmesg | grep -i irq
+
+and you should get something like this:
+
+
+
+Serial driver version 5.05c (2001-07-08) with MANY_PORTS MULTIPORT SHARE_IRQ SERIAL_PCI ISAPNP enabled
+ttyS00 at 0x03f8 (irq = 4) is a 16550A
+ttyS01 at 0x02f8 (irq = 3) is a 16550A
+PIIX: not 100% native mode: will probe irqs later
+PIIX: not 100% native mode: will probe irqs later
+ide0 at 0x1f0-0x1f7,0x3f6 on irq 14
+ide1 at 0x170-0x177,0x376 on irq 15
+0x378: ECP settings irq=<none or set by other means> dma=<none or set by other means>
+eth0: Davicom DM9102 at 0xfc00, 00:08:a1:2c:e4:33, IRQ 11
+eth1: RealTek RTL-8029 found at 0xff80, IRQ 11, 00:00:E8:E3:B1:5C.
+
+
+note these two lines:
+
+eth0: Davicom DM9102 at 0xfc00, 00:08:a1:2c:e4:33, IRQ 11
+eth1: RealTek RTL-8029 found at 0xff80, IRQ 11, 00:00:E8:E3:B1:5C.
+
+if you did lsmod you get:
+
+
+Module                  Size  Used by
+ipt_MASQUERADE          1664   1  (autoclean)
+ipt_mac                 1072   5  (autoclean)
+ipt_state               1024   2  (autoclean)
+iptable_filter          2128   0  (autoclean) (unused)
+ip_nat_ftp              3488   0  (unused)
+iptable_nat            16528   1  [ipt_MASQUERADE ip_nat_ftp]
+ip_conntrack_irc        2928   0  (unused)
+ip_conntrack_ftp        3824   0  (unused)
+ip_conntrack           15824   4  [ipt_MASQUERADE ipt_state ip_nat_ftp iptable_nat ip_conntrack_irc ip_conntrack_ftp]
+ip_tables              10944   7  [ipt_MASQUERADE ipt_mac ipt_state iptable_filter iptable_nat]
+ppp_synctty             5472   0  (unused)
+ppp_async               6864   1 
+ppp_generic            19296   3  [ppp_synctty ppp_async]
+slhc                    5056   0  [ppp_generic]
+ne2k-pci                5536   1 
+8390                    6208   0  [ne2k-pci]
+dmfe                   12960   1 
+ext3                   61936   1 
+jbd                    38976   1  [ext3]
+
+
+note these two lines:
+
+ne2k-pci                5536   1 
+dmfe                   12960   1 
+
+
+
+
+Another way:
+~~~~~~~~~~~
+Do
+
+	cat /proc/pci:
+
+You will get:
+
+.
+.
+.
+
+   Ethernet controller: Davicom Semiconductor, Inc. Ethernet 100/10 MBit (rev 64).
+      IRQ 11.
+      Master Capable.  Latency=96.  Min Gnt=20.Max Lat=40.
+      I/O at 0xfc00 [0xfcff].
+      Non-prefetchable 32 bit memory at 0xffbdff00 [0xffbdffff].
+
+    Ethernet controller: Realtek Semiconductor Co., Ltd. RTL-8029(AS) (rev 0).
+      IRQ 11.
+      I/O at 0xff80 [0xff9f].
+
+.
+.
+.
+
+
+
+Then do:
+	
+ifconfig eth0 
+
+
+eth0      Link encap:Ethernet  HWaddr 00:08:A1:2C:E4:33  
+          UP BROADCAST RUNNING MULTICAST  MTU:1500  Metric:1
+          RX packets:22612 errors:0 dropped:0 overruns:0 frame:0
+          TX packets:22424 errors:0 dropped:0 overruns:0 carrier:0
+          collisions:4 txqueuelen:100 
+          RX bytes:15754010 (15.0 Mb)  TX bytes:4274645 (4.0 Mb)
+          Interrupt:11 Base address:0xfc00 
+
+
+ifconfig eth1
+
+
+eth1      Link encap:Ethernet  HWaddr 00:00:E8:E3:B1:5C  
+          inet addr:192.168.0.1  Bcast:192.168.0.255  Mask:255.255.255.0
+          UP BROADCAST RUNNING MULTICAST  MTU:1500  Metric:1
+          RX packets:22198 errors:0 dropped:0 overruns:0 frame:0
+          TX packets:21996 errors:0 dropped:0 overruns:0 carrier:0
+          collisions:2 txqueuelen:100 
+          RX bytes:4161976 (3.9 Mb)  TX bytes:15572180 (14.8 Mb)
+          Interrupt:11 Base address:0xff80 
+
+
+
+Note that
+
+eth0 has Base address: 0xfc00 
+eth1 has Base address: 0xff80
+
+
+Compare with the /proc/pci output:
+
+0xfc00 is Davicom
+0xff80 is Realtek
+
+
+
+
+Installing a Network Interface Card
+-----------------------------------
+Use only PCI based NICs.  After inserting the NICs in the PCI slots,
+powerup and boot linux.  It will auto detect and insert the driver.
+You need to login as root to do the installation and configuration.
+
+If the driver is not installed, use the "insmod" command to insert
+the driver into the kernel. The drivers are found in 
+
+/lib/modules/2.4.7-10/kernel/drivers/net
+
+For example, to insert the driver for a 3Com's  3C509 Network Interface
+Card,
+
+	insmod 3C509.o
+
+To check whether installation was successful,
+
+	lsmod
+
+The above "lsmod" command will list all the modules (drivers) that 
+are loaded. If the 3C509.o driver has been loaded, it will be listed.
+
+Incidentally, to remove the module,
+
+	rmmod 3C509
+
+
+Another way, probably better way, is to use:
+
+	modprobe 3C509
+
+that way all additional dependencies will be resolved cleanly.
+To remove,
+
+	modprobe -r 3C509
+
+
+
+To make sure that the right module (driver) is used when
+the NIC starts, edit the file /etc/modules.conf, an example
+is shown below:
+
+
+
+	alias parport_lowlevel parport_pc 
+	alias eth0 3c509 
+	alias eth1 ne2k-pci 
+	alias sound-slot-0 sb 
+	alias usb-controller usb-ohci 
+
+
+eth0 above uses the 3Com module 3c509
+whilst eth1 interface uses the accton module ne2k-pci.
+At times, it may install the wrong module, eg,
+the C-NET network card would installs tulip module by default,
+which is wrong.  You need to ;
+
+	rmmod tulip
+
+then
+
+	modprobe dmfe
+
+dmfe.o is the correct driver.  Eventhough tulip installs without
+any error and ifconfig eth0 up produces no error, yet when you 
+try to ping or telnet or ftp, it will lamely give you a clueless
+message:
+
+	"host unreachable"
+
+You may be misguided into thinking that it is an IP setting problem,
+when it fact it is the wrong driver which has been installed.
+Check the diskette containing drivers which come with the NIC to
+find out the correct driver to install.
+
+
+Configuration of Network Interface Card
+---------------------------------------
+To set the IP address, use the "ifconfig" command.
+For example, to set the NIC to 192.168.0.1,
+
+ifconfig eth0 192.168.0.1
+
+
+
+eth0 is the symbolic name for the first NIC. "eth" stands for 
+ethernet, the most widely used LAN protocol. To activate the interface,
+
+	ifconfig eth0 up
+
+To deactivate,
+
+	ifconfig eth0 down
+
+
+Note that the default netmask for this Class C address is 255.255.255.0. 
+If you wanted to set the mask manually, eg, 255.255.255.0, you could do 
+it like this:
+
+	ifconfig 192.168.0.1 netmask 255.255.255.0
+
+Linux will automatically calculate the network address as "192.168.0.0"
+and the broadcast address as "192.168.0.255".
+
+If you wanted to assign a second IP address to the same NIC, 
+eg, 192.168.1.1, do this:
+
+	ifconfig eth0:1 192.168.1.1
+
+
+Note the ":" after "eth0".  This is also known as a virtual interface.
+
+Then, to bring up the second interface,
+
+	ifconfig eth0:1 up
+
+In order to check what interfaces are up, just type "ifconfig" without
+any parameters,
+
+	ifconfig
+
+
+
+
+To install a NIC on the second PC, repeat the above.  The interface
+will also be "eth0". But the IP address must be 192.168.0.2, since the 
+first PC is 192.168.0.1. You should not use different IP networks address
+if you want the two PCs to be able to communicate with each other within
+the same segment.
+
+So, the topology should be as in Fig A above.
+192.168.0.1 and 192.168.0.2 are both in the same network, ie, the network 
+known as 192.168.0.x, where x can be from 1 to 254.  You can have up to 
+254 PCs in this network! 
+
+Next, connect PCA to an ethernet hub using a CAT5 UTP cable and connect 
+PCB to the hub using another CAT5 UTP cable. 
+
+
+Checking Connectivity
+---------------------
+After setting up the physical connections, ping each other.
+For example, from PCA,
+
+	ping 192.168.0.2
+
+Repeat from PCB,
+	
+	ping 192.168.0.1
+
+If there is an echo then the physical and IP configuration is OK.
+Else, if there is error, check the physical cable connection, ie,
+make sure the RJ-45 connector is snugly plugged into the hub and to
+the respective NICs. Also see if the hub/switch and the NIC lights
+up for each cable that is plugged in. If still fails, then change
+cable. It should be OK now.  Make sure it is a straight through
+cable and not a cross-over cable.  Straight through cable, or
+patch cable is used to connect a host to the hub/switch.  A 
+cross-over cable is used to connect two hubs using port-to-port
+connection, or, to connect only 2 hosts together from NIC-to-NIC
+without using a hub. 
+
+
+Altering MAC Address
+--------------------
+You can alter the MAC address that the NIC responds to by typing
+the following command:
+
+	ifconfig eth0 hw ether 00:60:67:44:05:41
+
+where 
+	eth0 is the NIC you wish to  modify
+
+	ether is the class of protocol (Ethernet)
+
+	00:60:67:44:05:41 is the MAC address you wish to use
+
+
+To make it permanent you need to edit the rc.sysinit file
+or put the above line in this script:
+
+	/etc/rc.d/rc.local
+
+
+Note that you are not changing the hardware's MAC address, only,
+the MAC address that the NIC responds to. If you remove the script
+above, or, reboot the computer, the default hardware MAC address is
+reused.
+
+
+Setting Windows 2000 with 2 NICs
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The topology:
+
+			Win2000:          
+	RH9 <---------> d-link nic        Inti
+			(192.168.0.1)     Default
+	(192.168.0.2)   3com nic <------->Gateway
+			(192.168.1.173)	  (192.168.1.245)
+       
+	 
+
+For Windows,
+
+Set the 3-com's default gateway to 192.168.1.245
+
+The above setup enables me to surf internet using Windows 2000,
+but the RH9 box cannot use Windows2000 as router to surf 
+Internet, since Windows 2000 could not do NAT routing.
+
+A better setup is:
+
+Windows2000:       RH9
+3-com		   d-link nic          Inti	
+(192.168.0.2)<---> (192.168.0.1)       Default 
+                   Lantech nic         Gateway
+		   (192.168.1.173)<--->(192.168.1.245)
+
+Configure Windows2000's default gateway as 192.168.0.1.
+Setup firewall (iptables)  on RH9 to do NAT masquerade.
+Works very well.
+
+

@@ -1,0 +1,98 @@
+NFS (Network File System)
+========================
+
+Objective
+---------
+Mounting a filesystem on a remote host.
+
+
+
+Architecture
+------------
+Consider Fig.A below:
+
+	192.168.0.2(oz) <--------------> 192.168.0.1 (wiz)
+		/mnt/bill			/home/bill
+
+
+We are going to mount /home/bill on 192.168.0.1 under the
+directory /mnt/bill on 192.168.0.2.
+
+
+
+192.168.0.1 Settings
+--------------------
+edit /etc/exports :
+
+	/home/bill *(rw)
+
+* means allow all hosts to access. Alternatively, you could restrict access
+as follows:
+
+	/home/bill oz(rw)
+
+which means only allow oz to access.
+
+Start the portmapper and nfs servers:
+
+	/etc/init.d/portmap start
+	/etc/init.d/nfs start
+
+Then, export the nfs filesystem:
+
+	exportfs -a
+
+
+
+192.168.0.2 Settings
+--------------------
+edit /etc/fstab by adding this line:
+
+192.168.20.3:/home/bill /mnt/bill		ext2	defaults	0 0
+
+
+The last two zeroes mean: no dump (backup ) and no fsck (file sys check during 
+boot) (Anonymous,1999).
+
+Then, 
+
+	mkdir /mnt/bill
+
+Then, to mount:
+
+	mount 192.168.20.3:/home/bill /mnt/bill
+
+
+or,
+
+	mount -a -t nfs
+
+
+You can now access bill's files, as though they were local.
+
+
+To umount:
+
+	umount /mnt/bill
+
+
+To disable exports
+------------------
+
+On, 192.168.0.1, do:
+
+	exportfs -u -a
+
+Then, optionally:
+
+	/etc/nfs stop
+	/etc/portmap stop
+
+
+
+
+
+Bibligraphy
+-----------
+Anonymous (1999). Maximum Linux Security.  
+Indianapolis:Sams publishing.

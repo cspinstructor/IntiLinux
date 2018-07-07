@@ -1,0 +1,270 @@
+DHCP
+====
+
+Objective
+---------
+To set up a DHCP Server to assign dynamic IP's to win98/ME and
+Linux hosts within the LAN.  DHCP stands for Dynamic Host 
+Configuration Protocol.
+
+The setup is shown in Fig A below:
+
+
+   LAN with                 Firewall   
+   net address  -----(eth0)    +    (eth1)---- Internet
+   192.168.0.0/24          DHCP Server
+
+	Fig A. DHCP Server for a LAN
+	----------------------------
+
+where eth0 is the internal interface, and eth1 (or ppp0) 
+is the external interface, which may be ADSL, ISDN or analog
+modem.
+ 
+The LAN consists of Win98/ME and  hosts and the Firewall runs
+Linux.        		 
+
+
+Warning
+-------
+Running a DHCP server, dhcpd, on the firewall machine is 
+dangerous. If network neighbours on the ISP's subnet
+are DHCP clients, they can confuse the Firewall dhcp server
+with the ISP's DHCP server. Jaring or TMnet may terminate
+your ISP account. Ideally we should run a DHCP server inside
+the LAN, behind the firewall.
+
+
+However, assuming we choose the topology as in Fig A, then
+the firewall rule must ensure that local messages are allowed
+to pass through only the internal network interface to the 
+LAN. The firewall rules must ensure that the DHCP messages 
+from the LAN are are not forwarded through the external
+network interface. An easy way out of this is to simply
+edit the /etc/rc.d/init.d/dhcpd script as described below.
+No need to edit the rc.firewall script.
+
+
+Configuring the dhcpd server
+----------------------------
+
+Two steps are needed to avoid the problems mentioned above:
+
+[1]  The specific network interface must be defined for dhcpd
+before the dhcpd server is started.  To assign the dhcpd server
+to a particular interface (ie the internal interface), edit
+the dhcpd startup script:
+
+	/etc/rc.d/init.d/dhcpd
+
+by editing this line as follows:
+
+	daemon /usr/sbin/dhcpd eth0
+
+where eth0 is the internal interface.
+
+
+[2]  Add the following line to /etc/rc.d/rc.local:
+
+	route add -host 255.255.255.255 dev eth0
+
+where eth0 is the internal interface.  This is to direct all
+broadcasts to the internal network rather than go out to the
+Internet.
+
+
+The terse explanation can also be found in the manuals
+dhcpd.conf and dhcpd.leases.
+
+
+
+Configuring the range of IP addresses
+-------------------------------------
+The dhcpd server configuration file is /etc/dhcpd.conf. The
+file must contain a declaration record for each subnet attached
+to the server machine. Assuming only one subnet as in Fig. A,
+set the configuration as follows:
+
+
+option domain-name "society.intipen.edu.my";
+option domain-name-servers 192.168.0.1;
+option subnet-mask 255.255.255.0;
+subnet 192.168.0.0 netmask 255.255.255.0 {
+	range 192.168.0.10 192.168.0.100;
+	default-lease-time 86400;
+	max-lease-time 2592000;
+	option broadcast-address 192.168.0.255;
+	option routers 192.168.0.1;
+}
+
+
+
+
+Lines 1 to 3 are self-explanatory.
+
+Line 4 specifies that the dhcpd server will assign IP addresses
+for the network 192.168.0.0/24.
+
+Line 5 specifies the range of IP address to be used during
+assignment. Note that you should not start from 192.168.0.1 because
+it is reserved for the server. In this setting, the first IP
+address to be assign is 192.168.0.10 and the last is 192.168.0.100.
+
+Line 6 specifies that the dynamic IP that is assigned will last only
+for 1 day (86400 seconds), ie, for those client who do not specify
+an expiration time.
+
+Line 7 specifies that the maximum allowed for any IP that is assigned
+is 1 month (2592000 seconds) - ie for those clients who do specify
+for an expiration time.
+
+Line 8 specifies the LAN's broadcast address
+ 
+Line 9 speficies the default gateway (router)
+
+
+
+The dhcpd.leases file
+---------------------
+The dhcpd.leases file must be created before the dhcpd server
+will start. The purpose of this file is to keep track of which
+host has requested for IP addresses and also the expiry period
+for each IP assigned (the lease).
+
+To create the dhcpd.leases file:
+
+	touch /var/lib/dhcp/dhcpd.leases
+
+
+# The format of this file is documented in the 
+# dhcpd.leases(5) manual page.
+
+lease 192.168.0.10 {
+	starts 6 2002/10/19 14:13:25;
+	ends 0 2002/10/20 14:13:25;
+	hardware ethernet 00:08:a1:19:90:4a;
+	uid 01:00:08:a1:19:90:4a;
+	client-hostname "Annie";
+}
+lease 192.168.0.11 {
+	starts 1 2002/10/21 06:54:53;
+	ends 2 2002/10/22 06:54:53;
+	hardware ethernet 00:e0:98:99:7a:b0;
+	uid 01:00:e0:98:99:7a:b0;
+}
+
+
+After creating the dhcpd.lease file, do not edit it.
+It is meant for the dhcpd server to keep track of what IP
+has been assigned and the expiry period for each IP.
+
+
+Win98/ME client configuration
+-----------------------------
+Right-click on Network Neighborhood, or, My Network Places on the
+Desktop.  On the pop up menu, select  properties. In the Network 
+dialog box, select TCP/IP's properties. Then, set as follows:
+
+[IP Address]
+Obtain an IP address automatically
+
+[Gateway]
+192.168.0.1
+
+[DNS Configuration]
+192.168.0.1
+
+The above settings assume that your firewall/router/gateway 
+is 192.168.0.1 and your internal caching nameserver is also 192.168.0.1.
+
+
+
+Linux client configuration
+--------------------------
+Add the default gateway to:
+
+	/etc/sysconfig/network
+
+by adding this line
+
+	GATEWAY="192.168.0.1"
+
+or edit:
+
+	/etc/rc.d/rc.local
+
+by adding this line;
+
+	route add default gw 192.168.0.1
+
+Then run the dhcp client program:
+
+	dhcpcd eth0
+
+and the Linux host will ask the DHCP server for an IP address.
+eth0 is the interface where the dynamically assigned IP will be
+bound to. 
+
+Note the spelling:
+
+	dhcpcd  NOT   dhcpd
+
+dhcpd is the DHCP server,
+dhcpcd is the DHCP client.
+
+To release the dhcp-assigned address:
+
+	dhcpcd -k
+
+Firewall configuration
+----------------------
+The rc.firewall should be edited to filter MAC addresses.
+
+If you need to filter based on both IP and MAC, then, you should
+edit the file /etc/dhcpd.conf file as described below.
+
+
+Fixed IP configuration
+----------------------
+So that a predetermined IP will be assigned to a particular 
+MAC address, edit the /etc/dhcpd.conf as follows:
+
+
+option domain-name "society.intipen.edu.my";
+option domain-name-servers 192.168.0.1;
+option subnet-mask 255.255.255.0;
+option broadcast-address 192.168.0.255;
+option routers 192.168.0.1;
+
+subnet 192.168.0.0 netmask 255.255.255.0 {
+	range 192.168.0.10 192.168.0.100;
+}
+host Annie
+{
+	hardware ethernet 00:08:a1:19:90:4a;
+	fixed-address 192.168.0.15;
+}
+
+host Unix
+{
+	hardware ethernet 00:e0:98:99:7a:b0;
+	fixed-address 192.168.0.25;
+}
+
+
+
+Remember to restart dhcpd after modifying the dhcpd.conf file:
+
+	/etc/rc.d/init.d/dhcpd restart
+
+
+
+When not to use dynamic IP's
+-----------------------------
+Do not use dynamic IP's for servers, eg, file/print servers,
+database servers, email servers, routers, gateways. 
+
+
+For, example if need to share some MS-Excel files on one of the
+hosts within the LAN, then this host should have a fixed IP.
+

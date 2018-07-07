@@ -1,0 +1,116 @@
+
+ISDN
+======
+
+Objective
+---------
+To setup an ISDN Terminal Adapter Modem  and configure it to dial up
+an Internet Service Provider 
+
+
+Installing a modem
+-------------------
+Exactly the same as for analog modem. Refer to the chapter on
+Modems.txt.  ISDN TA Modem is external  - the one provided 
+by TmNet's TMISDN service is
+
+	Eicon Diva Terminal Adapter
+
+Note that internal ISDN PCI card needs special drivers and programs
+like isdn4linux.  But for TA modems, no need, they behave almost 
+the same as an analog modem. They simulate an analog modem. 
+
+
+
+Configuring ISP dial up
+-----------------------
+Follow the same as for the analog modem. Refer to the chapter on
+Modems.txt. 
+
+Use wvdialconf to generate the /etc/wvdial.conf file, then edit it
+by setting the stupid mode as follows:
+
+	Stupid mode = 1
+
+The default is 0, which means, after Carrier is detected and the
+1511 number is dialled, it waits for the ISP to send a prompt.
+For ISDN services, there is no prompt, and the dialer should not 
+wait, hence setting stupid mode to 1.
+
+Also insert the  Username, Password and Phone. An example
+is shown below:
+
+
+	[Dialer Defaults]
+	Modem = /dev/ttyS1
+	Baud = 11500 
+	Init1 = ATZ
+	SetVolume = 0
+	Dial Command = ATDT
+
+	[Dialer isdn]
+	Username = billgates 
+	Password = mikersof
+	Phone = 1511
+	Inherits = Dialer Defaults
+	Stupid mode = 1 
+
+
+
+To dial, login as root, then type:
+
+	wvdial isdn
+
+
+Autodial
+--------
+Whenever the connection is terminated, it will try to
+reconnect.  To set the wvdial to start whenever the
+computer reboots, create this script called Internet.sh:
+
+	#!/bin/sh
+	wvdial isdn
+	
+
+add this entry to the file /etc/rc.d/rc.local file:
+
+	/root/Internet.sh &
+
+Note that you should run it as a background process so
+that it will not block and cause the bootup process to
+come to a grinding halt!
+
+Also note that wvdial once started will only attempt
+reconnection if the Modem is NOT switched off! So, if you 
+need to control internet access, switch off the Terminal
+Adapter, NOT the Modem! See Fig A:
+
+
+      tel line
+     ---------> Terminal Adaptor <------> Modem
+					   ^
+   					   | RS232
+					   |
+					   V
+					   PC
+
+
+		Fig. A. TA ISDN MODEM and PC		 
+		----------------------------
+
+Note that the Modem is connected to the PC's serial port
+via RS232 serial cable using DB9 connector.
+	   
+
+
+Troubleshooting
+---------------
+Run the connection script and see the output.
+Also check the /var/log/messages file.  If you see PAP 
+authentication failure then, it means that your Tmnet
+account has been suspended. Use another account - edit the
+/etc/wvdial.conf file.  Remember, the ISDN service is only
+a physical service provided by the telco.  In order to use the
+Internet, you can use any TMnet account.  But remember to dial
+1525 and not 1515.
+
